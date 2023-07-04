@@ -1,0 +1,14 @@
+# temporary files
+env
+logs
+
+# generated files
+dist
+build
+*__pycache__
+*.egg-info
+*_build
+
+# environment settings
+.vscode
+checkCode.sh
