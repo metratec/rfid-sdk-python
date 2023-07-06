@@ -254,7 +254,7 @@ class UhfReaderGen2(ReaderGen2):
         response: List[str] = await self._send_command("AT+REG?")
         # +REG: ETSI_LOWER
         try:
-            return response[0].split(" ")[1]
+            return response[0][6:]
         except IndexError as exc:
             raise RfidReaderException(
                 f"Not expected response for command AT+REG? - {response}") from exc
@@ -301,7 +301,7 @@ class UhfReaderGen2(ReaderGen2):
         response: List[str] = await self._send_command("AT+Q?")
         # +Q: 4,2,15
         try:
-            setting: List[str] = response[0][4].split(",")
+            setting: List[str] = response[0][4:].split(",")
             return pow(2, int(setting[0]))
         except IndexError as exc:
             raise RfidReaderException(
@@ -558,6 +558,7 @@ class UhfReaderGen2(ReaderGen2):
             try:
                 if info[1] == 'OK':
                     tag.set_value(memory.lower(), info[2])
+                    tag.set_data(info[2])
                 else:
                     tag.set_error_message(info[1])
             except IndexError:

@@ -1,19 +1,14 @@
-.. Change log
+# Release Notes
 
-Release Notes
-#############
+## 0.3.1
 
-0.3.1
-=====
-
-:Release Date: 2023-07-06
+Release Date: 2023-07-06
 
 * UHF Reader Gen2 - read_tag_data correctly stores the read values as data in the returned transponder
 
-0.3.0
-=====
+## 0.3.0
 
-:Release Date: 2023-07-04
+Release Date: 2023-07-04
 
 Version 0.3 is the first public release of the project, under the terms of the `MIT license`.
 

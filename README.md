@@ -23,7 +23,7 @@ python setup.py sdist bdist_wheel
 ### Install the library
 
 * `python -m pip install wheel`
-* `python -m pip install metratec_rfid-0.3.0.tar.gz`
+* `python -m pip install metratec_rfid-0.3.1.tar.gz`
 
 ### Call the example files
 
