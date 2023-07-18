@@ -1,16 +1,18 @@
 # Release Notes
 
-## 0.3.1
+## 1.0.0
 
-Release Date: 2023-07-06
+Public release
+
+## 0.3.2
+
+* UHF Reader Gen2 - write epc method also update the tag epc length
+
+## 0.3.1
 
 * UHF Reader Gen2 - read_tag_data correctly stores the read values as data in the returned transponder
 
 ## 0.3.0
-
-Release Date: 2023-07-04
-
-Version 0.3 is the first public release of the project, under the terms of the `MIT license`.
 
 Supports following Metratec rfid readers:
 

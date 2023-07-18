@@ -685,7 +685,7 @@ class UhfReaderGen2(ReaderGen2):
         Args:
             tid (str): the tag id
 
-            new_epx: the new epc
+            new_epc: the new epc
 
             start (int, optional): Start address. Defaults to 0.
 
@@ -693,24 +693,71 @@ class UhfReaderGen2(ReaderGen2):
             RfidReaderException: if an reader error occurs
 
         Returns:
-            List[UhfTag]: list with written tags, if a tag was not written the has_error boolean is true
+            list[UhfTag]: list with written tags, if a tag was not written the has_error boolean is true
         """
 
+        # disable 'Too many branches' warning - pylint: disable=R0912
         # disable 'Too many arguments' warning - pylint: disable=R0913
-        mask_settings: Optional[Dict[str, Any]] = None
+        # disable 'Too many local variables' warning - pylint: disable=R0914
+        if len(new_epc) % 4:
+            raise RfidReaderException(" The new epc length must be a multiple of 4")
+        tags: dict[str, UhfTag] = {}
+        epc_words: int = int(len(new_epc) / 4)
+        epc_length_byte = int(epc_words / 2) << 12
+        if 1 == epc_words % 2:
+            epc_length_byte |= 0x0800
+
+        mask_settings: dict = {}
         if tid:
             mask_settings = await self.get_mask()  # get current mask
             await self.set_mask(tid, memory="TID")
-        inventory: List[UhfTag] = await self.write_tag_data(new_epc, start, 'EPC')
-        for tag in inventory:
+        inventory_pc: list[UhfTag] = await self.read_tag_data(0, 2, 'PC')
+        if not inventory_pc:
+            # no tags found
+            return inventory_pc
+        pc_byte = 0
+        for tag in inventory_pc:
+            data = int(str(tag.get_data()), 16) & 0x07FF
+            if not pc_byte:
+                pc_byte = data
+            elif data != pc_byte:
+                raise RfidReaderException("Different tags are in the field, which would result in"
+                                          " data loss when writing. Please edit individually.")
+        # write epc
+        inventory_epc: list[UhfTag] = await self.write_tag_data(new_epc, start, 'EPC')
+        for tag in inventory_epc:
+            tags[tag.get_id()] = tag
             if not tag.has_error():
-                old_epc: Optional[str] = tag.get_epc()
+                old_epc: str = tag.get_id()
                 tag.set_epc(new_epc)
                 tag.set_value("old_epc", old_epc)
-        if mask_settings:
-            # reset the the last mask setting
-            await self.set_mask(mask_settings['memory'], mask_settings['start'], mask_settings['mask'])
-        return inventory
+        # write length
+        pc_byte |= epc_length_byte
+        inventory_pc = await self.write_tag_data(f"{pc_byte:04X}", 0, 'PC')
+        for tag_pc in inventory_pc:
+            tag_epc = tags.get(tag_pc.get_id())
+            if tag_epc:
+                if tag_pc.has_error():
+                    if not tag_epc.has_error():
+                        # write new epc length not ok
+                        tag_epc.set_error_message("epc written, epc length not updated!")
+                    else:
+                        # both not successful:
+                        tag_epc.set_error_message(f"epc not written - {tag_epc.get_error_message()}")
+            elif not tag_pc.has_error():
+                # tag epc length was updated
+                tag_pc.set_error_message("epc not written, but epc length updated!")
+                tags[tag_pc.get_id()] = tag_pc
+            # else: both epc write and epc length was not successful...ignore tag
+        # Note: The field is active during these two write commands
+        #       ...so both commands return the old epc and can be compared
+        if tid:
+            if mask_settings['enabled']:
+                # reset to the last mask setting
+                await self.set_mask(mask_settings['memory'], mask_settings['start'], mask_settings['mask'])
+            else:
+                await self.reset_mask()
+        return list(tags.values())
 
     async def kill_tag(self, password: str, epc_mask: Optional[str] = None) -> List[UhfTag]:
         """Kill a transponder

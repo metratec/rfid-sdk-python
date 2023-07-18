@@ -33,6 +33,6 @@ from .pulsar_lr import PulsarLR  # noqa: F401
 from .hf_tag import HfTag  # noqa: F401
 from .uhf_tag import UhfTag  # noqa: F401
 
-__version_info__ = (0, 3, 0)
+__version_info__ = (1, 0, 0)
 __version__ = ".".join(str(x) for x in __version_info__)
 __author__ = 'neumann@metratec.com'

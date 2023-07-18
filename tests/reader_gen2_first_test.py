@@ -246,11 +246,11 @@ async def main():
         # await asyncio.sleep(2.0)
         # await test.connect()
 
-        # await test.test_settings()
+        await test.test_settings()
         # await test.test_inventory()
         # await test.test_continuous_inventory(2)
         # await test.test_inventory_multi()
-        await test.test_continuous_inventory_multi()
+        # await test.test_continuous_inventory_multi()
         # await test.check_antenna()
         # await test.test_inventory_report()
         # await test.test_read_data(2)

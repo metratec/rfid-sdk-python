@@ -9,6 +9,7 @@ import sys
 import time
 import datetime
 
+
 sys.path.append(os.getcwd())
 # print(sys.path)
 from metratec_rfid.connection.serial_connection import SerialConnection  # noqa -- flake ignore
