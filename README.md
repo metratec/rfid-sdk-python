@@ -6,14 +6,25 @@ An Asyncio based library to control Metratec RFID readers with Python 3.
 
 ### Create virtual environment
 
+To use the library without installing it into your global Python packages, you can create a virtual environment.
+
+#### Linux
+
 * Create virtual environment in the subfolder env: `python3 -m venv env`  
 * Activate the virtual environment: `source env/bin/activate`  
 (* Deactivate: `deactivate`)
 
+#### Windows
+
+* Create virtual environment in the subfolder env: `python -m venv env`  
+* Activate the virtual environment: `env\Scripts\activate.bat`  
+(* Deactivate: `env\Scripts\deactivate.bat`)
+
 ### Install the library
 
-* `python -m pip install wheel`
-* `python -m pip install metratec_rfid-1.0.0.tar.gz`
+To install this package, you can use the setup.py file. To do this, run the following command:
+
+`python setup.py install`
 
 ### Call the example files
 

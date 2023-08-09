@@ -1,1 +1,2 @@
-pyserial_asyncio
+pyserial>=3.5
+pyserial_asyncio>=0.6

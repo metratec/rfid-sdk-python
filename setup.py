@@ -36,5 +36,5 @@ setup(
     include_package_data=True,
     package_dir={'metratec_rfid': 'metratec_rfid'},
     package_data={'metratec_rfid': ['py.typed', 'connection/py.typed']},
-    install_requires=["pyserial_asyncio"]
+    install_requires=["pyserial>=3.5", "pyserial_asyncio>=0.6"]
 )
