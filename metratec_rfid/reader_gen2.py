@@ -76,6 +76,22 @@ class ReaderGen2(RfidReader):
             timestamp (float): timestamp
         """
 
+    async def send_custom_command(self, command: str, timeout: float = 2.0) -> List[str]:
+        """Send a command to the reader and return the response
+
+        Args:
+            command (str): the command
+
+            timeout (float, optional): The response timeout. Defaults to 2.0.
+
+        Raises:
+            RfidReaderException: if an reader error occurs
+
+        Returns:
+            list[str]: The reader responses. In case of an set command the list is empty
+        """
+        return await self._send_command(command=command, timeout=timeout)
+
     async def _send_command(self, command: str, *parameters: Any, timeout: float = 2.0) -> List[str]:
         """Send a command to the reader and return the response
 
@@ -87,10 +103,10 @@ class ReaderGen2(RfidReader):
             timeout (float, optional): The response timeout. Defaults to 2.0.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: The reader response with an error
 
         Returns:
-            str: the reader response
+            list[str]: The reader responses. In case of an set command the list is empty
         """
         # disable 'Too many branches' warning - pylint: disable=R0912
         # disable 'Too many nested blocks' warning - pylint: disable=R1702
@@ -118,7 +134,7 @@ class ReaderGen2(RfidReader):
                     if resp is None:
                         break
                     if resp == 'OK':
-                        return response.split("\r") if response else [""]
+                        return response.split("\r") if response else []
                     if resp == 'ERROR':
                         try:
                             msg = response[response.rindex(
@@ -153,10 +169,10 @@ class ReaderGen2(RfidReader):
         # check reader
         if self._check_reader:
             expected = getattr(self, "_expected_reader", {})
-            if info['hardware'] != expected.get('hardware_name', 'unknown'):
+            if expected.get('hardware_name', 'unknown').lower() not in info['hardware'].lower():
                 raise RfidReaderException(
                     f"Wrong reader type! {expected.get('hardware_name','unknown')} expected, {info['hardware']} found")
-            if info['firmware'] != expected.get('firmware_name', 'unknown'):
+            if expected.get('firmware_name', 'unknown').lower() not in info['firmware'].lower():
                 raise RfidReaderException(f"Wrong reader firmware! {expected.get('firmware_name','unknown')} expected" +
                                           f", {info['firmware']} found")
             firmware_version = float(f"{info['firmware_version'][0:2]}.{info['firmware_version'][2:4]}")

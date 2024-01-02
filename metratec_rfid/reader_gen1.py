@@ -3,7 +3,7 @@
 from abc import abstractmethod
 import asyncio
 import time
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from .reader_exception import RfidReaderException
 from .reader import RfidReader
@@ -34,6 +34,21 @@ class ReaderGen1(RfidReader):
         if data[0] == 'H' and data[2] == 'T':  # HBT
             return
         self._add_data_to_receive_buffer(data)
+
+    async def send_custom_command(self, command: str) -> List[str]:
+        """Send a command to the reader and return the response
+
+        Args:
+            command (str): the command
+
+        Raises:
+            RfidReaderException: if an reader error occurs
+
+        Returns:
+            list[str]: The reader responses. In case of an set command the list is empty
+        """
+        response = await self._send_recv_command(command=command)
+        return response.split('\r')
 
     async def _send_recv_command(self, command: str, *parameters) -> str:
         await self._communication_lock.acquire()
@@ -214,10 +229,10 @@ class ReaderGen1(RfidReader):
             info['firmware'] = info['hardware']
             info['firmware_version'] = response[-4:]
         expected = getattr(self, "_expected_reader", {})
-        if info['hardware'] != expected.get('hardware_name', 'unknown'):
+        if expected.get('hardware_name', 'unknown').lower() not in info['hardware'].lower():
             raise RfidReaderException(
                 f"Wrong reader type! {expected.get('hardware_name','unknown')} expected, {info['hardware']} found")
-        if info['firmware'] != expected.get('firmware_name', 'unknown'):
+        if expected.get('firmware_name', 'unknown').lower() not in info['firmware'].lower():
             raise RfidReaderException(f"Wrong reader firmware! {expected.get('firmware_name','unknown')} expected" +
                                       f", {info['firmware']} found")
         firmware_version = float(f"{info['firmware_version'][0:2]}.{info['firmware_version'][2:4]}")

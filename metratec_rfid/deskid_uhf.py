@@ -29,7 +29,7 @@ class DeskIdUhf(UhfReaderGen1):
         self._config["heartbeat"] = 0
 
 
-@ExpectedReaderInfo("DESKID_UHF_V2", "DESKID_UHF_V2", 1.0)
+@ExpectedReaderInfo("DeskID_UHF_v2_E", "DeskID_UHF_v2_E", 1.0)
 class DeskIdUhf2(UhfReaderGen2):
     """metraTec DeskID Uhf
     """

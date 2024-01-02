@@ -3,6 +3,14 @@
 Release Notes
 #############
 
+1.1.1
+=====
+
+:Release Date: 2023-09-29
+
+* reader type check updated
+* bug fixes
+
 1.1.0
 =====
 
@@ -11,6 +19,7 @@ Release Notes
 * Reader GRU300 and QRG2 added
 * special impinj tag methods added
 * bug fixes
+* send_custom_command method added
 
 1.0.0
 =====

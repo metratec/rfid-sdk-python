@@ -32,6 +32,7 @@ try:
     from .pulsar_lr import PulsarLR  # noqa: F401
     from .gru300 import GRU300  # noqa: F401
     from .qr import QRG2  # noqa: F401
+    from .deskid_uhf import DeskIdUhf2  # noqa: F401
 except ModuleNotFoundError:
     pass
 

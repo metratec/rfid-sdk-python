@@ -6,6 +6,7 @@ import logging
 import os
 from logging.handlers import RotatingFileHandler
 from logging import StreamHandler
+import random
 import sys
 sys.path.append(os.getcwd())
 # print(sys.path)
@@ -235,29 +236,104 @@ class TestReader:
     async def check_antenna(self):
         await self._reader.check_antennas()
 
+    async def test_simple(self) -> None:
+        print(await self._reader.send_custom_command("ATI"))
+        print(await self._reader.send_custom_command("AT+PWR=12"))
+
+    async def test_antenna_multiplex(self):
+        mux = await self._reader.get_antenna_multiplex()
+        await self._reader.set_antenna_multiplex(4)
+        await self._reader.set_antenna_multiplex([1, 2, 3, 4])
+        await self._reader.set_antenna_multiplex(mux)
+
+    async def test_new_commands(self):
+        # High on Tag
+        data_org = await self._reader.get_high_on_tag_output()
+        for value in range(1, 5):
+            duration_tmp = random.randint(10, 1000)
+            await self._reader.set_high_on_tag_output(value, duration_tmp)
+            data = await self._reader.get_high_on_tag_output()
+            if value != data['pin']:
+                raise RfidReaderException("Set high on tag error")
+            if duration_tmp != data['duration']:
+                raise RfidReaderException("Set high on tag duration error")
+            if not data['enable']:
+                raise RfidReaderException("Is high on tag error")
+        await self._reader.disable_high_on_tag()
+        data = await self._reader.get_high_on_tag_output()
+        if data['enable']:
+            raise RfidReaderException("high on tag not deactivated")
+        if data_org['enable']:
+            await self._reader.set_high_on_tag_output(data_org['pin'], data_org['duration'])
+
+        # Authenthicate Server
+        data = await self._reader.call_impinj_authentication_service()
+        print(data)
+
+        # Inventory settings
+        settings_org = await self._reader.get_inventory_settings()
+        await self._reader.set_inventory_settings(True, True, True, True)
+        settings = await self._reader.get_inventory_settings()
+        if not settings['only_new_tag']:
+            raise RfidReaderException("Setting error")
+        if not settings['with_rssi']:
+            raise RfidReaderException("Setting error")
+        if not settings['with_tid']:
+            raise RfidReaderException("Setting error")
+        if not settings['fast_start']:
+            raise RfidReaderException("Setting error")
+        await self._reader.set_inventory_settings(settings_org['only_new_tag'],
+                                                  settings_org['with_rssi'],
+                                                  settings_org['with_tid'],
+                                                  settings_org['fast_start'])
+        settings = await self._reader.get_inventory_settings()
+        if settings_org['only_new_tag'] != settings['only_new_tag']:
+            raise RfidReaderException("Setting error")
+        if settings_org['with_rssi'] != settings['with_rssi']:
+            raise RfidReaderException("Setting error")
+        if settings_org['with_tid'] != settings['with_tid']:
+            raise RfidReaderException("Setting error")
+        if settings_org['fast_start'] != settings['fast_start']:
+            raise RfidReaderException("Setting error")
+
+        # Test session
+        session_org = await self._reader.get_selected_session()
+        for session in ['0', '1', '2', '3', 'AUTO']:
+            await self._reader.set_selected_session(session)
+            tmp = await self._reader.get_selected_session()
+            if tmp != session:
+                raise RfidReaderException("Session error")
+        await self._reader.set_selected_session(session_org)
+
 
 async def main():
     """ main
     """
     # Disable 'Catching too general exception' warning: pylint: disable=W0703
     test = TestReader(READER_IP)
+    all_ok = True
     try:
         await test.connect()
+        await test.test_antenna_multiplex()
+        # await test.test_new_commands()
         # await asyncio.sleep(2.0)
         # await test.connect()
 
+        await test.test_simple()
+
         await test.test_settings()
-        # await test.test_inventory()
+        await test.test_inventory()
         # await test.test_continuous_inventory(2)
-        # await test.test_inventory_multi()
+        await test.test_inventory_multi()
         # await test.test_continuous_inventory_multi()
-        # await test.check_antenna()
+        await test.check_antenna()
         # await test.test_inventory_report()
         # await test.test_read_data(2)
         # await test.test_write_data("3034", "3034", 4)
         # await test.test_write_epc("E280689420004019", "ABCD1234", 4)
-        # await test.test_io()
+        await test.test_io()
     except Exception as err:
+        all_ok = False
         logging.getLogger("Main").error("Exception: %s", str(err), exc_info=True)
         # logging.getLogger("Main").error(err, exc_info=True)
     finally:
@@ -265,6 +341,8 @@ async def main():
             await test.disconnect()
         except RfidReaderException as err:
             logging.getLogger("Main").error("Error disconnect - %s", err)
+    print(f'\n{"Done" if all_ok else "Done with errors!!!"}\n')
+
 
 if __name__ == '__main__':
     logger = logging.getLogger()

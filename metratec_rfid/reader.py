@@ -171,6 +171,20 @@ class RfidReader(BaseClass):
                     self._inventory[tag.get_id()] = tag
             self._inventory_condition.notify()
 
+    @abstractmethod
+    async def send_custom_command(self, command: str) -> List[str]:
+        """Send a command to the reader and return the response
+
+        Args:
+            command (str): the command
+
+        Raises:
+            RfidReaderException: if an reader error occurs
+
+        Returns:
+            list[str]: The reader responses. In case of an set command the list is empty
+        """
+
     async def fetch_inventory(self, wait_for_tags: bool = False) -> List[Tag]:
         """
         Can be called when an inventory has been started. Waits until at least one tag is found

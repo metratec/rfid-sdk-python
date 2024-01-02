@@ -120,15 +120,16 @@ class UhfReaderGen2(ReaderGen2):
                 continue
             if response[split_index] == '<':
                 # inventory message, no tag
-                # messages: Antenna Error / NO TAGS FOUND / ROUND FINISHED ANT=2
+                # messages: <Antenna Error> / <NO TAGS FOUND> / <ROUND FINISHED ANT=2>
                 if response[split_index+1] == 'N':  # NO TAGS FOUND
                     pass
                 elif response[split_index+1] == 'R':
-                    # ROUND FINISHED ANT2
-                    try:
-                        antenna = int(response[-2:-1])
-                    except (IndexError, ValueError) as err:
-                        self.get_logger().debug("Error parsing inventory response - %s", err)
+                    if len(response) > split_index + 16:
+                        # ROUND FINISHED ANT2
+                        try:
+                            antenna = int(response[-2:-1])
+                        except (IndexError, ValueError) as err:
+                            self.get_logger().debug("Error parsing inventory response - %s", err)
                 elif self._ignore_errors:
                     pass
                 else:
