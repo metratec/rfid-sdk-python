@@ -3,6 +3,13 @@
 Release Notes
 #############
 
+1.1.3
+=====
+
+:Release Date: 2023-10-19
+
+* Gen1 UHF - Memory Access Errors will now be handled correctly
+
 1.1.2
 =====
 

@@ -834,6 +834,10 @@ class UhfReaderGen1(ReaderGen1):
                         for tag in inventory_error:
                             tag.set_antenna(antenna)
                         continue
+                    if line.startswith("ACE"):  # Access Error
+                        new_tag.set_error_message("Access Error")
+                        inventory_error.append(new_tag)
+                        continue
                 elif line[0] == "C":
                     if line.startswith("CER"):
                         new_tag.set_error_message("CRC error")

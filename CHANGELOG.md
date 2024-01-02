@@ -1,5 +1,9 @@
 # Release Notes
 
+## 1.1.3
+
+* Gen1 UHF - Memory Access Errors will now be handled correctly
+
 ## 1.1.2
 
 * Gen1 UHF - reading the reserved transponder memory now works as expected
