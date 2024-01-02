@@ -804,7 +804,7 @@ class UhfReaderGen1(ReaderGen1):
 
             Dict['timestamp', float]: the timestamp
         """
-        self._last_write_data = "lock_tag"
+        self._last_write_data = "kill"
         self._inv_called = False
         return await self._get_last_inventory("KIL", "SSL" if ssl else None)
 
@@ -886,15 +886,9 @@ class UhfReaderGen1(ReaderGen1):
                     index = 4
                     if self._last_inventory['request'][index] == "S":  # Call with SSL (WDT SSL USR)
                         index = 7
-                    if self._last_inventory['request'][index] == "U":  # USR request
-                        new_tag.set_data(line)
-                    elif self._last_inventory['request'][index] == "T":  # TID request
+                    if self._last_inventory['request'][index] == "T":  # TID request
                         new_tag.set_tid(line)
-                    elif self._last_inventory['request'][index] == "E":  # EPC request
-                        new_tag.set_data(line)
-                    elif self._last_inventory['request'][index] == "A":  # ACP request
-                        new_tag.set_data(line)
-                    elif self._last_inventory['request'][index] == "K":  # KLP request
+                    if self._last_inventory['request'][index] != "\r":  # USR, RES, EPC, ACP, KLP
                         new_tag.set_data(line)
 
             if self._additional_epc:

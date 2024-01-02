@@ -1,5 +1,9 @@
 # Release Notes
 
+## 1.1.2
+
+* Gen1 UHF - reading the reserved transponder memory now works as expected
+
 ## 1.1.1
 
 * reader type check updated

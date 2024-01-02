@@ -3,6 +3,13 @@
 Release Notes
 #############
 
+1.1.2
+=====
+
+:Release Date: 2023-10-16
+
+* Gen1 UHF - reading the reserved transponder memory now works as expected
+
 1.1.1
 =====
 
