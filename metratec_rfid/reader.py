@@ -103,10 +103,12 @@ class RfidReader(BaseClass):
             self._handle_data = self._data_received_config
             self._connection.connect()
         max_time: float = time() + timeout
-        while self.get_status()['status'] >= 0:
+        while True:
             await asyncio.sleep(0.02)
             if self.is_running():
                 return
+            if self.get_status()['status'] < 0:
+                raise RfidReaderException(self.get_status()['message'])
             if max_time <= time():
                 self._connection.disconnect()
                 self._send = self._send_not_connected
@@ -513,7 +515,7 @@ class RfidReader(BaseClass):
         """
 
     @abstractmethod
-    async def set_antenna_multiplex(self, antennas: int) -> None:
+    async def set_antenna_multiplex(self, antennas) -> None:
         """Number of antennas to be multiplexed
 
         Args:
@@ -524,7 +526,7 @@ class RfidReader(BaseClass):
         """
 
     @abstractmethod
-    async def get_antenna_multiplex(self) -> int:
+    async def get_antenna_multiplex(self):
         """Return the number of antennas to be multiplexed
 
         Raises:

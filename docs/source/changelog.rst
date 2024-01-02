@@ -3,14 +3,22 @@
 Release Notes
 #############
 
+1.1.0
+=====
+
+:Release Date: 2023-08-30
+
+* Reader GRU300 and QRG2 added
+* special impinj tag methods added
+* bug fixes
+
 1.0.0
 =====
 
+:Release Date: 2023-07-07
+
 Version 1.0 is the public release of the project, under the terms of the `MIT license`.
 
-Release Date: 2023-07-07
-
-* UHF Reader Gen2 - write epc method also update the tag epc length
 
 0.3.2
 =====

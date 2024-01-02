@@ -1,5 +1,12 @@
 # Release Notes
 
+## 1.1.0
+
+* Gen2 UHF
+  * reader GRU300 and QRG2 added
+  * special impinj tag methods added
+  * bug fixes
+
 ## 1.0.0
 
 Public release

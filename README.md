@@ -22,7 +22,7 @@ To use the library without installing it into your global Python packages, you c
 
 ### Install the library
 
-To install this package, you can use the setup.py file. To do this, run the following command:
+To install this library call the setup.py file with the following command:
 
 `python setup.py install`
 

@@ -23,6 +23,7 @@ class ReaderGen2(RfidReader):
         self._communication_lock = asyncio.Lock()
         self._config: dict = {}
         self._ignore_errors = False
+        self._check_reader = True
 
     # @override
     def _data_received_config(self, data: str, timestamp: float) -> None:
@@ -97,7 +98,7 @@ class ReaderGen2(RfidReader):
         try:
             self._clear_response_buffer()
             send_command = self._prepare_command(command, *parameters)
-            self.get_logger().debug("send %s", command)
+            self.get_logger().debug("send %s", send_command)
             self._send(send_command+"\r")
             try:
                 resp: str = await self._recv(timeout)
@@ -148,7 +149,21 @@ class ReaderGen2(RfidReader):
         return command + "=" + ",".join(str(x) for x in parameters if x is not None)
 
     async def _config_reader(self) -> None:
-        self._config.update(await self.get_reader_info())
+        info = await self.get_reader_info()
+        # check reader
+        if self._check_reader:
+            expected = getattr(self, "_expected_reader", {})
+            if info['hardware'] != expected.get('hardware_name', 'unknown'):
+                raise RfidReaderException(
+                    f"Wrong reader type! {expected.get('hardware_name','unknown')} expected, {info['hardware']} found")
+            if info['firmware'] != expected.get('firmware_name', 'unknown'):
+                raise RfidReaderException(f"Wrong reader firmware! {expected.get('firmware_name','unknown')} expected" +
+                                          f", {info['firmware']} found")
+            firmware_version = float(f"{info['firmware_version'][0:2]}.{info['firmware_version'][2:4]}")
+            if firmware_version < expected.get('min_firmware', 1.0):
+                raise RfidReaderException("Reader firmware too low, please update! " +
+                                          f"Minimum {expected.get('min_firmware')} expected, {firmware_version} found")
+        self._config.update(info)
         try:
             self._config['antenna'] = await self.get_antenna()
         except RfidReaderException:
@@ -306,17 +321,6 @@ class ReaderGen2(RfidReader):
                 'hardware': hardware[1],
                 'hardware_version': hardware[2],
                 'serial_number': serial[1]}
-            expected = getattr(self, "_expected_reader", {})
-            if info['hardware'] != expected.get('hardware_name', 'unknown'):
-                raise RfidReaderException(
-                    f"Wrong reader type! {expected.get('hardware_name','unknown')} expected, {info['hardware']} found")
-            if info['firmware'] != expected.get('firmware_name', 'unknown'):
-                raise RfidReaderException(f"Wrong reader firmware! {expected.get('firmware_name','unknown')} expected" +
-                                          f", {info['firmware']} found")
-            firmware_version = float(f"{info['firmware_version'][0:2]}.{info['firmware_version'][2:4]}")
-            if firmware_version < expected.get('min_firmware', 1.0):
-                raise RfidReaderException("Reader firmware too low, please update! " +
-                                          f"Minimum {expected.get('min_firmware')} expected, {firmware_version} found")
             return info
         except IndexError as exc:
             raise RfidReaderException(
@@ -338,11 +342,11 @@ class ReaderGen2(RfidReader):
                 f"Not expected response for command AT+ANT? - {response}") from exc
 
     # @override
-    async def set_antenna_multiplex(self, antennas: int) -> None:
+    async def set_antenna_multiplex(self, antennas) -> None:
         await self._send_command("AT+MUX", antennas)
 
     # @override
-    async def get_antenna_multiplex(self) -> int:
+    async def get_antenna_multiplex(self):
         response: List[str] = await self._send_command("AT+MUX?")
         # +MUX: 4
         try:

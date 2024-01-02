@@ -17,7 +17,7 @@ with open(path.join(HERE, 'README.md'), encoding='utf-8') as f:
 # This call to setup() does all the work
 setup(
     name="metratec_rfid",
-    version="1.0.0",
+    version="1.1.0",
     description="metraTec rfid sdk",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -36,5 +36,5 @@ setup(
     include_package_data=True,
     package_dir={'metratec_rfid': 'metratec_rfid'},
     package_data={'metratec_rfid': ['py.typed', 'connection/py.typed']},
-    install_requires=["pyserial>=3.5", "pyserial_asyncio>=0.6"]
+    install_requires=["pyserial==3.5", "pyserial_asyncio==0.6"]
 )

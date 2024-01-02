@@ -85,20 +85,14 @@ class UhfReaderGen2(ReaderGen2):
         # continuous inventory event
         try:
             if msg[2] == 'M':  # +CMINV:
-                if not self._cb_inventory:
-                    return
                 # '+CMINV: '
                 self._fire_inventory_event(self._parse_inventory(
                     msg.split("\r"), timestamp, 8))  # type: ignore
             elif msg[5] == 'R':
-                if not self._cb_inventory_report:
-                    return
                 # '+CINVR: '
                 self._fire_inventory_report_event(self._parse_inventory(
                     msg.split("\r"), timestamp, 8, True))  # '+CINVR: '
             else:
-                if not self._cb_inventory:
-                    return
                 # '+CINV: '
                 self._fire_inventory_event(self._parse_inventory(
                     msg.split("\r"), timestamp, 7))  # type: ignore
@@ -142,10 +136,13 @@ class UhfReaderGen2(ReaderGen2):
                     error = response[split_index+1:-1]
                 continue
             info: List[str] = response[split_index:].split(',')
-            new_tag = UhfTag(info[0], timestamp, tid=info[1] if with_tid else None,
-                             rssi=int(info[2]) if with_rssi and with_tid else int(info[1]) if with_rssi else None,
-                             seen_count=int(info[-1]) if is_report else 1)
-            inventory.append(new_tag)
+            try:
+                new_tag = UhfTag(info[0], timestamp, tid=info[1] if with_tid else None,
+                                 rssi=int(info[2]) if with_rssi and with_tid else int(info[1]) if with_rssi else None,
+                                 seen_count=int(info[-1]) if is_report else 1)
+                inventory.append(new_tag)
+            except IndexError as err:
+                self.get_logger().debug("Error parsing inventory transponder -%s", err)
         if error:
             error_detail = self._config.get('error', {})
             self._config.setdefault('error', error_detail)
@@ -184,53 +181,6 @@ class UhfReaderGen2(ReaderGen2):
         """
         return await super().fetch_inventory(wait_for_tags)  # type: ignore
 
-    # def _parse_inventory_report(self, responses, timestamp: float, split_index: int = 7) -> List[Tag]:
-    #     # +INVR: 3034257BF468D480000003EB,4
-    #     # +INVR: 3034257BF468D480000003EC,2
-    #     # +INVR: <REPORT FINISHED>
-    #     inventory: List[Tag] = []
-    #     use_epc: bool = self._config['inventory_report']['id'] == 'EPC'
-    #     error: Optional[str] = None
-    #     for response in responses:
-    #         if response[0] != "+":
-    #             continue
-    #         if response[split_index] == '<':
-    #             # inventory message, no tag
-    #             # messages: NO TAGS FOUND / REPORT FINISHED
-    #             continue
-    #         if response[split_index] == '<':
-    #             # inventory message, no tag
-    #             # messages: Antenna Error
-    #             if self._ignore_errors:
-    #                 continue
-    #             error = response[split_index+1:-1]
-    #         info: List[str] = response[split_index:].split(',')
-    #         if use_epc:
-    #             tag: UhfTag = UhfTag(
-    #                 epc=info[0], timestamp=timestamp, seen_count=int(info[1]))
-    #         else:
-    #             tag = UhfTag(epc=info[0], tid=info[0],
-    #                          timestamp=timestamp, seen_count=int(info[1]))
-    #         inventory.append(tag)
-    #     if error:
-    #         raise RfidReaderException(f"{error}")
-    #     return inventory
-
-    # async def get_config(self) -> Dict[str, Any]:
-    #     config = await super().get_config()
-    #     config['region'] = await self.get_region()
-    #     config['tag_population'] = await self.get_tag_size()
-    #     return config
-
-    # async def set_config(self, config: Optional[Dict[str, Any]] = None) -> None:
-    #     if not config:
-    #         return
-    #     await super().set_config(config)
-    #     if 'region' in config:
-    #         await self.set_region(config['region'])
-    #     if 'tag_population' in config:
-    #         await self.set_tag_size(config['tag_population'])
-
     async def set_region(self, region: str) -> None:
         """Sets the used uhf region
 
@@ -259,31 +209,32 @@ class UhfReaderGen2(ReaderGen2):
             raise RfidReaderException(
                 f"Not expected response for command AT+REG? - {response}") from exc
 
-    async def set_tag_size(self, tags_size: int, min_tags: int = 0, max_tags: int = 32768) -> None:
-        """Configure the expected numbers of transponders in the field
+    async def set_tag_size(self, tags_size: int, min_tags: int = -1, max_tags: int = -1) -> None:
+        """Configure the expected numbers of transponders in the field.
+        Alternatively, the set_q_value method can be used.
 
         Args:
             tags_size (int): expected numbers of transponders
 
-            min_tags (int, optional): Minimum numbers of transponders. Defaults to 4.
+            min_tags (int, optional): minimum numbers of transponders.
 
-            max_tags (int, optional): Maximum numbers of transponders. Defaults to 32768.
+            max_tags (int, optional): maximum numbers of transponders.
 
         Raises:
             RfidReaderException: if an reader error occurs
         """
+        if not (min_tags >= 0 and max_tags >= 0 or min_tags < 0 and max_tags < 0):
+            raise RfidReaderException("min_tags and max_tags must be set, or none of the these")
         q_start: int = 0
         q_min: Optional[int] = None
         q_max: Optional[int] = None
         while tags_size > pow(2, q_start):
             q_start += 1
-        if min_tags:
+        if min_tags >= 0:
             q_min = 0
             while min_tags > pow(2, q_min):
                 q_min += 1
-        else:
-            q_min = 0
-        if max_tags:
+        if max_tags >= 0:
             q_max = 0
             while max_tags > pow(2, q_max):
                 q_max += 1
@@ -307,7 +258,68 @@ class UhfReaderGen2(ReaderGen2):
             raise RfidReaderException(
                 f"Not expected response for command AT+Q? - {response}") from exc
 
-    async def get_inventory_settings(self) -> dict:
+    async def set_q_value(self, q_start: int, q_min: int = -1, q_max: int = -1) -> None:
+        """Configure the expected numbers of transponders in the field as q value. Alternatively, the set_tag_size
+        method can be used.
+        The Q value is the exponent of 2 and should be around or above the expected number of tags.
+        Setting this value too low will result in tags being missed. Setting the value too high will lead to
+        unnecessary slow inventories.
+
+        Args:
+            q_start (int): start q value
+
+            q_min (int, optional): minimum q value
+
+            q_max (int, optional): maximum q value
+
+        Raises:
+            RfidReaderException: if an reader error occurs
+        """
+        if not (q_min >= 0 and q_max >= 0 or q_max < 0 and q_min < 0):
+            raise RfidReaderException("q_min and q_max must be set, or none of the these")
+        await self._send_command("AT+Q", q_start, q_min if q_min >= 0 else None, q_max if q_max >= 0 else None,)
+
+    async def get_q_value(self) -> Dict:
+        """Returns the configured q value. See set_q_value for more details.
+
+        Raises:
+            RfidReaderException: if an reader error occurs
+
+        Returns:
+            dict: with 'q_start', 'q_min' and 'q_max' entries
+        """
+        response: List[str] = await self._send_command("AT+Q?")
+        # +Q: 4,2,15
+        try:
+            setting: List[str] = response[0][4:].split(",")
+            return {'q_start': int(setting[0]),
+                    'q_min': int(setting[1]),
+                    'q_max': int(setting[2])}
+        except IndexError as exc:
+            raise RfidReaderException(
+                f"Not expected response for command AT+Q? - {response}") from exc
+
+    async def get_tag_size_settings(self) -> Dict[str, Any]:
+        """Returns the configured tag size
+
+        Raises:
+            RfidReaderException: if an reader error occurs
+
+        Returns:
+            dict: with 'tag_size', 'min_tags' and 'max_tags' entries
+        """
+        response: List[str] = await self._send_command("AT+Q?")
+        # +Q: 4,2,15
+        try:
+            setting: List[str] = response[0][4:].split(",")
+            return {'tag_size': pow(2, int(setting[0])),
+                    'min_tags': pow(2, int(setting[1])),
+                    'max_tags': pow(2, int(setting[2]))}
+        except IndexError as exc:
+            raise RfidReaderException(
+                f"Not expected response for command AT+Q? - {response}") from exc
+
+    async def get_inventory_settings(self) -> Dict[str, Any]:
         """Gets the current reader inventory settings
 
         Raises:
@@ -316,18 +328,21 @@ class UhfReaderGen2(ReaderGen2):
         Returns:
             dict: with 'only_new_tag', 'with_rssi' and 'with_tid' entries
         """
-        response: List[str] = await self._send_command("AT+INVS?")
+        responses: List[str] = await self._send_command("AT+INVS?")
         # +INVS: 0,1,0
+        data: List[str] = responses[0][7:].split(',')
         try:
-            config: Dict[str, bool] = {'only_new_tag': response[0][7] == '1',
-                                       'with_rssi': response[0][9] == '1', 'with_tid': response[0][11] == '1'}
+            config: Dict[str, bool] = {'only_new_tag': data[0] == '1',
+                                       'with_rssi': data[1] == '1',
+                                       'with_tid': data[2] == '1',
+                                       'fast_start': data[3] == '1' if len(data) > 3 else False}
             return config
         except IndexError as exc:
             raise RfidReaderException(
-                f"Not expected response for command AT+INVS? - {response}") from exc
+                f"Not expected response for command AT+INVS? - {responses}") from exc
 
     async def set_inventory_settings(self, only_new_tag: bool = False, with_rssi: bool = True,
-                                     with_tid: bool = False) -> None:
+                                     with_tid: bool = False, fast_start: bool = False) -> None:
         """Configure the inventory response
 
         Args:
@@ -337,16 +352,20 @@ class UhfReaderGen2(ReaderGen2):
 
             with_tid (bool, optional): Append the tid to the response. Defaults to False.
 
+            fast_start (bool, optional): Append the tid to the response. Defaults to False.
+
         Raises:
             RfidReaderException: if an reader error occurs
         """
-        await self._send_command("AT+INVS", 1 if only_new_tag else 0, 1 if with_rssi else 0, 1 if with_tid else 0)
+        await self._send_command("AT+INVS", 1 if only_new_tag else 0, 1 if with_rssi else 0, 1 if with_tid else 0,
+                                 1 if fast_start else 0)
 
         # update configuration
         config: Dict[str, Any] = self._config['inventory']
         config['only_new_tag'] = only_new_tag
         config['with_rssi'] = with_rssi
         config['with_tid'] = with_tid
+        config['fast_start'] = fast_start
 
     # @override
     async def get_inventory(self) -> List[UhfTag]:
