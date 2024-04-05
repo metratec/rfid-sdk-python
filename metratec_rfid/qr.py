@@ -7,7 +7,7 @@ from typing import List
 from .reader import ExpectedReaderInfo
 from .reader_exception import RfidReaderException
 from .connection.serial_connection import SerialConnection
-from .uhf_reader_gen2 import UhfReaderGen2
+from .uhf_reader_at import UhfReaderGen2
 
 
 @ExpectedReaderInfo("QRG2", "QRG2", 1.0)

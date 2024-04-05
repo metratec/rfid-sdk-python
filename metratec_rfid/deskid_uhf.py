@@ -7,8 +7,8 @@ from typing import List
 from .reader import ExpectedReaderInfo
 from .reader_exception import RfidReaderException
 from .connection.serial_connection import SerialConnection
-from .uhf_reader_gen1 import UhfReaderGen1
-from .uhf_reader_gen2 import UhfReaderGen2
+from .uhf_reader_ascii import UhfReaderGen1
+from .uhf_reader_at import UhfReaderGen2
 
 
 @ExpectedReaderInfo("DESKID_UHF", "DESKID_UHF", 3.15)

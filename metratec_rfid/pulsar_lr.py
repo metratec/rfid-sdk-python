@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Union
 from .reader import ExpectedReaderInfo
 from .reader_exception import RfidReaderException
 from .connection.socket_connection import SocketConnection
-from .uhf_reader_gen2 import UhfReaderGen2
+from .uhf_reader_at import UhfReaderGen2
 
 
 class PulsarLRBase(UhfReaderGen2):

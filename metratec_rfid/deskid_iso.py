@@ -3,7 +3,7 @@
 
 from .reader import ExpectedReaderInfo
 from .connection.serial_connection import SerialConnection
-from .hf_reader_gen1 import HfReaderGen1
+from .hf_reader_ascii import HfReaderGen1
 
 
 @ExpectedReaderInfo("DESKID_ISO", "DESKID_ISO", 2.18)

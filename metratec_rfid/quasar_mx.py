@@ -5,7 +5,7 @@ from .reader import ExpectedReaderInfo
 from .connection.serial_connection import SerialConnection
 from .connection.socket_connection import SocketConnection
 from .reader_exception import RfidReaderException
-from .hf_reader_gen1 import HfReaderGen1
+from .hf_reader_ascii import HfReaderGen1
 
 
 @ExpectedReaderInfo("QUASAR_MX", "QUASAR_MX", 2.18)

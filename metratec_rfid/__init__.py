@@ -12,14 +12,14 @@ from .connection import Connection  # noqa: F401
 # from .connection import Connection, SerialConnection, SocketConnection  # noqa: F401
 from .reader_exception import RfidReaderException  # noqa: F401
 
-from .uhf_reader_gen1 import UhfReaderGen1  # noqa: F401
+from .uhf_reader_ascii import UhfReaderGen1  # noqa: F401
 try:
     from .deskid_uhf import DeskIdUhf  # noqa: F401
     from .pulsar_mx import PulsarMX  # noqa: F401
 except ModuleNotFoundError:
     pass
 
-from .hf_reader_gen1 import HfReaderGen1  # noqa: F401
+from .hf_reader_ascii import HfReaderGen1  # noqa: F401
 try:
     from .deskid_iso import DeskIdIso  # noqa: F401
     from .quasar_lr import QuasarLR  # noqa: F401
@@ -27,7 +27,7 @@ try:
 except ModuleNotFoundError:
     pass
 
-from .uhf_reader_gen2 import UhfReaderGen2  # noqa: F401
+from .uhf_reader_at import UhfReaderGen2  # noqa: F401
 try:
     from .pulsar_lr import PulsarLR  # noqa: F401
     from .gru300 import GRU300  # noqa: F401
