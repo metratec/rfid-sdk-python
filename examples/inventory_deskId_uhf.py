@@ -10,7 +10,7 @@ After connection it fetches the current inventory from the reader and prints it 
 import asyncio
 from typing import List
 
-from metratec_rfid import DeskIdUhf
+from metratec_rfid import DeskIdUhf2
 from metratec_rfid import UhfTag
 from metratec_rfid import RfidReaderException
 
@@ -19,7 +19,7 @@ async def main():
     """_summary_
     """
     # Create an instance and define the serial connection
-    reader = DeskIdUhf(instance="Reader", serial_port="/dev/ttyUSB0")
+    reader = DeskIdUhf2(instance="Reader", serial_port="/dev/ttyACM0")
     # set a callback for the reader status
     reader.set_cb_status(lambda status: print(f"status changed: {status}"))
     # set a callback for the inventories

@@ -32,14 +32,14 @@ Using of the status and inventory callback
 
   import asyncio
 
-  from metratec_rfid import PulsarMX
+  from metratec_rfid import PulsarLR
   from metratec_rfid import RfidReaderException
   
   
   async def main():
   
       # Create an instance and define the serial connection
-      reader = PulsarMX(instance="Reader", hostname="192.168.2.239")
+      reader = PulsarLR(instance="Reader", hostname="192.168.2.239")
       # set a callback for the reader status
       reader.set_cb_status(lambda status: print(f"status changed: {status}"))
       # set a callback for the inventories
@@ -51,7 +51,6 @@ Using of the status and inventory callback
           # set the reader power
           await reader.set_power(17)
           # start the inventory
-          await reader.set_heartbeat(2)
           await reader.start_inventory()
           await asyncio.sleep(60)
           await reader.stop_inventory()

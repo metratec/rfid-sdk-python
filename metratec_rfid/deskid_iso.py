@@ -3,11 +3,11 @@
 
 from .reader import ExpectedReaderInfo
 from .connection.serial_connection import SerialConnection
-from .hf_reader_ascii import HfReaderGen1
+from .hf_reader_ascii import HfReaderAscii
 
 
 @ExpectedReaderInfo("DESKID_ISO", "DESKID_ISO", 2.18)
-class DeskIdIso(HfReaderGen1):
+class DeskIdIso(HfReaderAscii):
     """metraTec DeskID Iso Hf reader
     """
 

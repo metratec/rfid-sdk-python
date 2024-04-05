@@ -9,24 +9,26 @@ class Tag(dict):
     """Transponder class
     """
 
-    def __init__(self, tid: Optional[str], timestamp:  Optional[float] = None) -> None:
+    def __init__(self, tid: Optional[str], timestamp: Optional[float] = None) -> None:
         dict.__init__(self)
-        self.set_tid(tid)
-        self.set_timestamp(timestamp)
+        if tid:
+            self.set_tid(tid)
+        if timestamp:
+            self.set_timestamp(timestamp)
 
     @abstractmethod
     def get_id(self) -> str:
         """ return the tag identifier"""
 
-    def get_tid(self) -> Optional[str]:
+    def get_tid(self) -> str:
         """Return the tid
 
         Returns:
             str: the tid
         """
-        return self.get('tid')
+        return self.get('tid', '')
 
-    def set_tid(self, tid: Optional[str]) -> None:
+    def set_tid(self, tid: str) -> None:
         """Set the tid
 
         Args:
@@ -34,15 +36,15 @@ class Tag(dict):
         """
         self.set_value('tid', tid)
 
-    def get_timestamp(self) -> Optional[float]:
+    def get_timestamp(self) -> float:
         """Return the timestamp
 
         Returns:
             float: the timestamp
         """
-        return self.get('timestamp')
+        return self.get('timestamp', 0)
 
-    def set_timestamp(self, timestamp: Optional[float]) -> None:
+    def set_timestamp(self, timestamp: float) -> None:
         """Set the timestamp
 
         Args:
@@ -50,15 +52,15 @@ class Tag(dict):
         """
         self.set_value('timestamp', timestamp)
 
-    def get_first_seen(self) -> Optional[float]:
+    def get_first_seen(self) -> float:
         """Return the first seen timestamp
 
         Returns:
             float: the first seen timestamp
         """
-        return self.get('first_seen')
+        return self.get('first_seen', 0)
 
-    def set_first_seen(self, timestamp: Optional[float]) -> None:
+    def set_first_seen(self, timestamp: float) -> None:
         """Set the first seen timestamp
 
         Args:
@@ -66,15 +68,15 @@ class Tag(dict):
         """
         self.set_value('first_seen', timestamp)
 
-    def get_last_seen(self) -> Optional[float]:
+    def get_last_seen(self) -> float:
         """Return the last seen timestamp
 
         Returns:
             float: the last seen timestamp
         """
-        return self.get('last_seen')
+        return self.get('last_seen', 0)
 
-    def set_last_seen(self, timestamp: Optional[float]) -> None:
+    def set_last_seen(self, timestamp: float) -> None:
         """Set the last seen timestamp
 
         Args:
@@ -82,15 +84,15 @@ class Tag(dict):
         """
         self.set_value('last_seen', timestamp)
 
-    def get_data(self) -> Optional[str]:
+    def get_data(self) -> str:
         """Return the user data
 
         Returns:
             str: the user data
         """
-        return self.get('data')
+        return self.get('data', '')
 
-    def set_data(self, data: Optional[str]) -> None:
+    def set_data(self, data: str) -> None:
         """Set the data
 
         Args:
@@ -98,15 +100,15 @@ class Tag(dict):
         """
         self.set_value('data', data)
 
-    def get_antenna(self) -> Optional[int]:
+    def get_antenna(self) -> int:
         """Return the antenna
 
         Returns:
             int: the antenna
         """
-        return self.get('antenna')
+        return self.get('antenna', -1)
 
-    def set_antenna(self, antenna: Optional[int]) -> None:
+    def set_antenna(self, antenna: int) -> None:
         """Set the antenna
 
         Args:
@@ -123,7 +125,7 @@ class Tag(dict):
         count = self.get('seen_count')
         return count if count else 0
 
-    def set_seen_count(self, seen_count: Optional[int]) -> None:
+    def set_seen_count(self, seen_count: int) -> None:
         """Set the seen count
 
         Args:
@@ -139,15 +141,15 @@ class Tag(dict):
         """
         return self.get('has_error', False)
 
-    def get_error_message(self) -> Optional[str]:
+    def get_error_message(self) -> str:
         """Return the error message
 
         Returns:
             str: the error message
         """
-        return self.get('error_message')
+        return self.get('error_message', '')
 
-    def set_error_message(self, message: Optional[str]) -> None:
+    def set_error_message(self, message: str) -> None:
         """Set the error message
 
         Args:

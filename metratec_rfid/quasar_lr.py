@@ -4,11 +4,11 @@ from .reader import ExpectedReaderInfo
 from .connection.serial_connection import SerialConnection
 from .connection.socket_connection import SocketConnection
 from .reader_exception import RfidReaderException
-from .hf_reader_ascii import HfReaderGen1
+from .hf_reader_ascii import HfReaderAscii
 
 
 @ExpectedReaderInfo("QuasarLR", "QuasarLR", 2.2)
-class QuasarLR(HfReaderGen1):
+class QuasarLR(HfReaderAscii):
     """metraTec Quasar LR
     """
 

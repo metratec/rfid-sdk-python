@@ -9,7 +9,7 @@ Continuous Inventory
 ####################
 
 If you want to set the reader in a continuous scanning mode, then you can start the inventory scan
-with the method "start_inventory". To stop the scan, call the "stop_inventory" method. The founded transponders
+with the method "start_inventory". To stop the scan, call the "stop_inventory" method. The transponders found
 can be fetched with the method "fetch_inventory".
 
 Here an code example ::

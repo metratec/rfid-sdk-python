@@ -3,7 +3,7 @@ This is a sample file for using the inventory callback methods in the library.
 
 The program uses a deskid iso reader on the port COM1
 
-After connecting, the continuous inventory is started and the founded tags are printed to the console.
+After connecting, the continuous inventory is started and the tags found are printed to the console.
 """
 
 import asyncio

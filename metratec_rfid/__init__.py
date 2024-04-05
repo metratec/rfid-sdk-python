@@ -8,18 +8,24 @@ rfid module
 # from .connection.serial_connection import SerialConnection
 # from .connection.socket_connection import SocketConnection
 
-from .connection import Connection  # noqa: F401
-# from .connection import Connection, SerialConnection, SocketConnection  # noqa: F401
-from .reader_exception import RfidReaderException  # noqa: F401
+__author__ = "Matthias Neumann"
+__license__ = "MIT License"
+__version__ = "1.2.0"
+__maintainer__ = "Matthias Neumann"
+__email__ = "neumann@metratec.com"
 
-from .uhf_reader_ascii import UhfReaderGen1  # noqa: F401
+from .connection import Connection  # noqa: F401
+from .reader_exception import RfidReaderException  # noqa: F401
+from .reader_exception import RfidTransponderException  # noqa: F401
+
+from .uhf_reader_ascii import UhfReaderAscii  # noqa: F401
 try:
     from .deskid_uhf import DeskIdUhf  # noqa: F401
     from .pulsar_mx import PulsarMX  # noqa: F401
 except ModuleNotFoundError:
     pass
 
-from .hf_reader_ascii import HfReaderGen1  # noqa: F401
+from .hf_reader_ascii import HfReaderAscii  # noqa: F401
 try:
     from .deskid_iso import DeskIdIso  # noqa: F401
     from .quasar_lr import QuasarLR  # noqa: F401
@@ -27,16 +33,23 @@ try:
 except ModuleNotFoundError:
     pass
 
-from .uhf_reader_at import UhfReaderGen2  # noqa: F401
+from .uhf_reader_at import UhfReaderAT  # noqa: F401
 try:
     from .pulsar_lr import PulsarLR  # noqa: F401
     from .gru300 import GRU300  # noqa: F401
-    from .qr import QRG2  # noqa: F401
     from .deskid_uhf import DeskIdUhf2  # noqa: F401
 except ModuleNotFoundError:
     pass
 
+from .nfc_reader_at import NfcReaderAT  # noqa: F401
+try:
+    from .deskid_nfc import DeskIdNfc  # noqa: F401
+except ModuleNotFoundError:
+    pass
+
 from .hf_tag import HfTag  # noqa: F401
+from .hf_tag import ISO15Tag  # noqa: F401
+from .hf_tag import ISO14ATag  # noqa: F401
 from .uhf_tag import UhfTag  # noqa: F401
 
 __version_info__ = (1, 1, 0)

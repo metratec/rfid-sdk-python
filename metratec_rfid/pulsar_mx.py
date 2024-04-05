@@ -6,11 +6,11 @@ from .reader import ExpectedReaderInfo
 from .connection.serial_connection import SerialConnection
 from .connection.socket_connection import SocketConnection
 from .reader_exception import RfidReaderException
-from .uhf_reader_ascii import UhfReaderGen1
+from .uhf_reader_ascii import UhfReaderAscii
 
 
 @ExpectedReaderInfo("PULSAR_MX", "PULSAR_MX", 3.15)
-class PulsarMX(UhfReaderGen1):
+class PulsarMX(UhfReaderAscii):
     """metraTec Pulsar MX Uhf reader
     """
 

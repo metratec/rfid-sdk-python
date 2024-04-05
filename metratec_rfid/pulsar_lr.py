@@ -6,10 +6,10 @@ from typing import Any, Dict, List, Union
 from .reader import ExpectedReaderInfo
 from .reader_exception import RfidReaderException
 from .connection.socket_connection import SocketConnection
-from .uhf_reader_at import UhfReaderGen2
+from .uhf_reader_at import UhfReaderAT
 
 
-class PulsarLRBase(UhfReaderGen2):
+class PulsarLRBase(UhfReaderAT):
     """Pulsar LR"""
 
     def __init__(self, instance: str, address: str, port: int = 10001) -> None:
@@ -23,25 +23,6 @@ class PulsarLRBase(UhfReaderGen2):
         """
 
         super().__init__(instance, SocketConnection(address, port))
-
-    async def _get_connected_multiplexer(self) -> List[int]:
-        """the configured multiplexer size per antenna (index 0 == antenna 1)
-
-        Returns:
-            List[int]: with the configured multiplexer size
-        """
-        responses: List[str] = await self._send_command("AT+EMX?")
-        # +EMX: 3,0,0,0
-        data: List[str] = responses[0][6:].split(',')
-        return [int(i) for i in data]
-
-    async def _set_connected_multiplexer(self, connected_multiplexer: List[int]) -> None:
-        """define the connected multiplexer
-
-        Args:
-            connected_multiplexer (List[int]): list with the multiplexer size for each antenna
-        """
-        await self._send_command("AT+EMX", *connected_multiplexer)
 
     async def get_multiplexer(self, antenna_port: int) -> int:
         """Get the connected multiplexer (connected antennas per antenna port)
@@ -106,6 +87,24 @@ class PulsarLRBase(UhfReaderGen2):
             return [int(i) for i in data]
         return list(map(int, data))
 
+    async def get_antenna_power(self, antenna: int) -> int:
+        """Return the current antenna power
+
+        Args:
+            antenna (int): antenna
+
+        Raises:
+            RfidReaderException: if an reader error occurs
+
+        Returns:
+            int: the current antenna power
+        """
+        powers = await self.get_antenna_powers()
+        try:
+            return powers[antenna - 1]
+        except IndexError as exc:
+            raise RfidReaderException(f"Antenna {antenna} not available") from exc
+
     async def get_antenna_powers(self) -> List[int]:
         """the power value per antenna (index 0 == antenna 1)
 
@@ -117,15 +116,6 @@ class PulsarLRBase(UhfReaderGen2):
         data: List[str] = responses[0][6:].split(',')
         # return [int(i) for i in data]
         return list(map(int, data))
-
-    async def set_antenna_powers(self, antenna_powers: List[int]) -> None:
-        """set the power values for the antennas
-
-        Args:
-            antenna_powers (List[int]): list with the multiplexer size for each antenna
-            (the index 0 corresponds to the antenna 1)
-        """
-        await self._send_command("AT+PWR", *antenna_powers)
 
     async def set_antenna_power(self, antenna: int, power: int) -> None:
         """Sets the antenna power
@@ -145,23 +135,29 @@ class PulsarLRBase(UhfReaderGen2):
         powers[antenna - 1] = power
         await self.set_antenna_powers(powers)
 
-    async def get_antenna_power(self, antenna: int) -> int:
-        """Return the current antenna power
+    async def set_antenna_powers(self, antenna_powers: List[int]) -> None:
+        """set the power values for the antennas
 
         Args:
-            antenna (int): antenna
+            antenna_powers (List[int]): list with the multiplexer size for each antenna
+            (the index 0 corresponds to the antenna 1)
+        """
+        await self._send_command("AT+PWR", *antenna_powers)
 
-        Raises:
-            RfidReaderException: if an reader error occurs
+    async def get_high_on_tag_output(self) -> Dict[str, Any]:
+        """Return the current high on tag output pin
 
         Returns:
-            int: the current antenna power
+            dict: with 'enable', 'pin' and 'duration' entries
         """
-        powers = await self.get_antenna_powers()
-        try:
-            return powers[antenna - 1]
-        except IndexError as exc:
-            raise RfidReaderException(f"Antenna {antenna} not available") from exc
+        responses = await self._send_command("AT+HOT?")
+        # +HOT: 1
+        # +HOT: OFF
+        data: List[str] = responses[0][6:].split(',')
+        if data[0] == 'OFF':
+            return {'enable': False}
+        # return int(data[0]), int(data[1])
+        return {'enable': True, 'pin': int(data[0]), 'duration': int(data[1])}
 
     async def set_high_on_tag_output(self, output_pin: int, duration: int = 100):
         """Enable the "high on tag" feature which triggers the selected output to go to the "high" state,
@@ -178,21 +174,6 @@ class PulsarLRBase(UhfReaderGen2):
         """Disable the "high on tag" feature
         """
         await self._send_command("AT+HOT", 0)
-
-    async def get_high_on_tag_output(self) -> Dict[str, Any]:
-        """Return the current high on tag output pin
-
-        Returns:
-            dict: with 'enable', 'pin' and 'duration' entries
-        """
-        responses = await self._send_command("AT+HOT?")
-        # +HOT: 1
-        # +HOT: OFF
-        data: List[str] = responses[0][6:].split(',')
-        if data[0] == 'OFF':
-            return {'enable': False}
-        # return int(data[0]), int(data[1])
-        return {'enable': True, 'pin': int(data[0]), 'duration': int(data[1])}
 
     async def call_impinj_authentication_service(self) -> List[Dict[str, Any]]:
         """This command tags to an Impinj M775 tag using the proprietory authencation command.
@@ -229,6 +210,16 @@ class PulsarLRBase(UhfReaderGen2):
             raise RfidReaderException(
                 f"Not expected response for command AT+IAS? - {responses}") from exc
 
+    async def get_selected_session(self) -> str:
+        """Returns the current selected session. See set_selected_session for more details.
+
+        Returns:
+            str: the current selected session
+        """
+        responses: List[str] = await self._send_command("AT+SES?")
+        # +SES: AUTO
+        return responses[0][6:]
+
     async def set_selected_session(self, session: str = "AUTO"):
         """Manually select the session according to the EPC Gen 2 Protocol to use during inventory scan.
         Default value is "auto" and in most cases this should stay auto.
@@ -240,16 +231,6 @@ class PulsarLRBase(UhfReaderGen2):
 
         """
         await self._send_command("AT+SES", session)
-
-    async def get_selected_session(self) -> str:
-        """Returns the current selected session. See set_selected_session for more details.
-
-        Returns:
-            str: the current selected session
-        """
-        responses: List[str] = await self._send_command("AT+SES?")
-        # +SES: AUTO
-        return responses[0][6:]
 
     async def get_custom_impinj_settings(self) -> Dict[str, Any]:
         """Returns the custom impinj settings. See set_custom_settings for more detail.
@@ -315,6 +296,29 @@ class PulsarLRBase(UhfReaderGen2):
             int: the current rf mode id
         """
         await self._send_command("AT+RFM", mode_id)
+
+    ###############################################################################################
+    # Internal methods
+    ###############################################################################################
+
+    async def _get_connected_multiplexer(self) -> List[int]:
+        """the configured multiplexer size per antenna (index 0 == antenna 1)
+
+        Returns:
+            List[int]: with the configured multiplexer size
+        """
+        responses: List[str] = await self._send_command("AT+EMX?")
+        # +EMX: 3,0,0,0
+        data: List[str] = responses[0][6:].split(',')
+        return [int(i) for i in data]
+
+    async def _set_connected_multiplexer(self, connected_multiplexer: List[int]) -> None:
+        """define the connected multiplexer
+
+        Args:
+            connected_multiplexer (List[int]): list with the multiplexer size for each antenna
+        """
+        await self._send_command("AT+EMX", *connected_multiplexer)
 
 
 @ExpectedReaderInfo("PULSAR_LR", "PULSAR_LR", 1.0)

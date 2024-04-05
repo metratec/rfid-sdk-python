@@ -143,8 +143,7 @@ class SerialConnection(Connection):
                 else:
                     wait_until = self._min_reconnect_wait_time * \
                         retry_count ** 3
-                    if wait_until > self._max_reconnect_wait_time:
-                        wait_until = self._max_reconnect_wait_time
+                    wait_until = min(wait_until, self._max_reconnect_wait_time)
                 wait_until += time()
                 while self._is_started and wait_until > time():
                     await asyncio.sleep(0.5)

@@ -4,52 +4,21 @@ from time import time
 from typing import Any, Callable, Dict, List, Optional
 from .reader_exception import RfidReaderException
 
-from .hf_tag import HfTag
-from .reader_ascii import ReaderGen1
+from .hf_tag import HfTag, HfTagInfo
+from .reader_ascii import ReaderAscii
 from .reader_ascii import Connection
 
 
-class HfReaderGen1(ReaderGen1):
-    """The implementation of the uhf gen2 reader with the **AT-protocol.**
+class HfReaderAscii(ReaderAscii):
+    """The implementation of the hf gen1 reader with the **ASCII-protocol.**
     """
 
     def __init__(self, instance: str, connection: Connection) -> None:
         super().__init__(instance, connection)
         self._last_inventory: Dict[str, Any] = {'timestamp': None}
         self._last_request: Dict[str, Any] = {'timestamp': None}
-        self._cb_request: Optional[Callable[[str], None]] = None
+        self._cb_request: Optional[Callable[[HfTag], None]] = None
         self._rfi_enabled: bool = False
-
-    async def _prepare_reader(self) -> None:
-        await self.enable_rf_interface()
-
-    # @override
-    def _data_received(self, data: str, timestamp: float):
-        # disable 'Too many return statements' warning - pylint: disable=R0911
-        self.get_logger().debug("data received %s", data.replace(
-            "\r", "<CR>").replace("\n", "<LF>"))
-        data = data[:-1]
-        if data[0] == 'H' and data[2] == 'T':  # HBT
-            return
-        if data[0] == 'T':
-            if data[1] == 'D' or data[1] == 'N':  # TDT TND
-                self._parse_request(data)
-                return
-        if data[0] == 'I':
-            if data[1] == 'V':  # IVF
-                self._parse_inventory(data)
-                return
-        if data[0] == 'R' and data[2] == 'W':  # RNW Registers Not Written
-            self._rfi_enabled = False
-            return
-        if data[0] == 'S':
-            if data.startswith("SRT"):
-                # TODO Reader reset
-                return
-        if len(data) >= 10 and data[-6:-3] == 'IVF':
-            self._parse_inventory(data)
-            return
-        self._add_data_to_receive_buffer(data)
 
     # @override
     def set_cb_inventory(self, callback: Optional[Callable[[List[HfTag]], None]]
@@ -63,22 +32,8 @@ class HfReaderGen1(ReaderGen1):
         """
         return super().set_cb_inventory(callback)
 
-    # @override
-    async def fetch_inventory(self, wait_for_tags: bool = True) -> List[HfTag]:  # type: ignore
-        """
-        Can be called when an inventory has been started. Waits until at least one tag is found
-        and returns all currently scanned transponders from a continuous scan
-
-        Args:
-            wait_for_tags (bool): Set to true, to wait until transponders are available
-
-        Returns:
-            List[HfTag]: a list with the founded transponder
-        """
-        return await super().fetch_inventory(wait_for_tags)  # type: ignore
-
-    def set_cb_request(self, callback: Optional[Callable[[str], None]]
-                       ) -> Optional[Callable[[str], None]]:
+    def set_cb_request(self, callback: Optional[Callable[[HfTag], None]]
+                       ) -> Optional[Callable[[HfTag], None]]:
         """
         Set the callback for a new inventory. The callback has the following arguments:
         * tags (List[HfTag]) - the tags
@@ -170,7 +125,7 @@ class HfReaderGen1(ReaderGen1):
             RfidReaderException: if an reader error occurs
 
         Returns:
-            List[Tag]: An array with the founded transponder
+            List[Tag]: An array with the transponder found
         """
         if self._config['antenna_mode'][0] != "S":
             # Not in single antenna mode ... switch mode
@@ -200,7 +155,7 @@ class HfReaderGen1(ReaderGen1):
             RfidReaderException: if an reader error occurs
 
         Returns:
-            List[Tag]: An array with the founded transponder
+            List[Tag]: An array with the transponder found
         """
         if self._config['antenna_mode'][0] != "M":
             # Not in multiplex antenna mode ... switch mode
@@ -261,59 +216,8 @@ class HfReaderGen1(ReaderGen1):
         self._send_command("CNR INV", "SSL" if single_slot else None, "ONT" if only_new_tags else None,
                            "AFI {afi:02X}" if afi else None)
 
-    # @override
-    def _parse_inventory(self, data: str) -> None:
-        # E0040150954F02B1<CR>E200600311753E33<CR>ARP 12<CR>IVF 02
-        timestamp = time()
-        split = data.split('\r')
-        inventory: List[HfTag] = []
-        inventory_error: List[HfTag] = []
-        for line in split[0:-1]:
-            if line[1] == "R" and line[2] == "P":  # ARP  Antenna report
-                antenna = int(line[-2:])
-                for tag in inventory:
-                    tag.set_antenna(antenna)
-                continue
-            new_tag = HfTag(line, timestamp)
-            inventory.append(new_tag)
-        self._last_inventory['transponders'] = inventory
-        self._last_inventory['errors'] = inventory_error
-        self._last_inventory['timestamp'] = timestamp
-        self._fire_inventory_event(inventory)  # type: ignore
-
-    async def _get_last_inventory(self, command: str, *parameters, timeout: float = 2.0) -> Dict[str, Any]:
-        """
-        Args:
-            command (str): the command with a inventory response
-
-            timeout (float): response timeout, default to 2.0
-
-        Raises:
-            TimeoutError: if a timeout occurs
-
-        Returns:
-            List[Tag]: inventory response
-        """
-        await self._communication_lock.acquire()
-        try:
-            self._last_inventory['timestamp'] = None
-            self._last_inventory['request'] = self._prepare_command(command, *parameters)
-            self._send_command(command, *parameters)
-            max_time = time() + timeout
-            while max_time > time():
-                await asyncio.sleep(0.01)
-                if self._last_inventory['timestamp']:
-                    break
-            else:
-                if self._rfi_enabled:
-                    raise TimeoutError("no reader response for inventory command")
-                raise RfidReaderException("RF interface not enabled")
-            return self._last_inventory
-        finally:
-            self._communication_lock.release()
-
     async def read_tag_data(self, block_number: int, tag_id: Optional[str] = None,
-                            option_flag: bool = False) -> Dict[str, Any]:
+                            option_flag: bool = False) -> HfTag:
         """read the memory of the transponder
 
         Args:
@@ -335,8 +239,247 @@ class HfReaderGen1(ReaderGen1):
         """
         return await self._send_request("REQ", "20", f"{block_number:02X}", tag_id, option_flag)
 
+    async def read_tag_information(self, tag_id: Optional[str] = None,
+                                   option_flag: bool = False) -> HfTagInfo:
+        """read the transponder information
+
+        Args:
+            tag_id (str, optional): transponder to be read, if not set, the currently available transponder is read
+
+            option_flag (bool, optional): Meaning is defined by the tag command description.
+
+        Raises:
+            RfidReaderException: if an reader error occurs
+
+        Returns:
+            Dict['data', str]: The transponder data
+
+            Dict['error', str: The transponder error if data is empty
+
+            Dict['timestamp', float]: the timestamp
+        """
+        response = await self._send_request("REQ", "2B", None, tag_id, option_flag)
+
+        return HfTagInfo(response.get_tid(), response.get_data(), response.get_error_message(),
+                         response.get_timestamp(), response.get_antenna(), response.get_seen_count())
+
+    async def write_tag_data(self, block_number: int, data: str, tag_id: Optional[str] = None,
+                             option_flag: bool = False) -> HfTag:
+        """write the usr memory of the found transponder
+
+        Args:
+            block_number (int): block to write
+
+            data (str): data to write
+
+            tag_id (str, optional): transponder to be write, if not set, the currently available transponder is write
+
+            option_flag (bool, optional): Meaning is defined by the tag command description.
+
+        Raises:
+            RfidReaderException: if an reader error occurs
+
+        Returns:
+            Dict['data', str]: The read transponders
+
+            Dict['error', str]: the error message if data
+
+            Dict['timestamp', float]: the timestamp
+        """
+        return await self._send_request("WRQ", "21", f"{block_number:02X}{data}", tag_id, option_flag)
+
+    async def write_tag_afi(self, afi: int, tag_id: Optional[str] = None,
+                            option_flag: bool = False) -> HfTag:
+        """write the transponder application family identifier value
+
+        Args:
+            afi (int): the application family identifier to set
+
+            tag_id (str, optional): transponder to be write, if not set, the currently available transponder is write
+
+            option_flag (bool, optional): Meaning is defined by the tag command description.
+
+        Raises:
+            RfidReaderException: if an reader error occurs
+
+        Returns:
+            Dict['data', str]: The read transponders
+
+            Dict['error', str]: the error message if data
+
+            Dict['timestamp', float]: the timestamp
+        """
+        return await self._send_request("WRQ", "27", f"{afi:02X}", tag_id, option_flag)
+
+    async def lock_tag_afi(self, tag_id: Optional[str] = None, option_flag: bool = False) -> HfTag:
+        """Lock the transponder application family identifier
+
+        Args:
+            tag_id (str, optional): transponder to be write, if not set, the currently available transponder is write
+
+            option_flag (bool, optional): Meaning is defined by the tag command description.
+
+        Raises:
+            RfidReaderException: if an reader error occurs
+
+        Returns:
+            Dict['data', str]: The read transponders
+
+            Dict['error', str]: the error message if data
+
+            Dict['timestamp', float]: the timestamp
+        """
+        return await self._send_request("WRQ", "28", None, tag_id, option_flag)
+
+    async def write_tag_dsfid(self, dsfid: int, tag_id: Optional[str] = None,
+                              option_flag: bool = False) -> HfTag:
+        """write the transponder data storage format identifier
+
+        Args:
+            dsfid (int): the data storage format identifier to set
+
+            tag_id (str, optional): transponder to be write, if not set, the currently available transponder is write
+
+            option_flag (bool, optional): Meaning is defined by the tag command description.
+
+        Raises:
+            RfidReaderException: if an reader error occurs
+
+        Returns:
+            Dict['data', str]: The read transponders
+
+            Dict['error', str]: the error message if data
+
+            Dict['timestamp', float]: the timestamp
+        """
+        return await self._send_request("WRQ", "29", f"{dsfid:02X}", tag_id, option_flag)
+
+    async def lock_tag_dsfid(self, tag_id: Optional[str] = None, option_flag: bool = False) -> HfTag:
+        """Lock the transponder data storage format identifier
+
+        Args:
+            tag_id (str, optional): transponder to be write, if not set, the currently available transponder is write
+
+            option_flag (bool, optional): Meaning is defined by the tag command description.
+
+        Raises:
+            RfidReaderException: if an reader error occurs
+
+        Returns:
+            Dict['data', str]: The read transponders
+
+            Dict['error', str]: the error message if data
+
+            Dict['timestamp', float]: the timestamp
+        """
+        return await self._send_request("WRQ", "2A", None, tag_id, option_flag)
+
+    # @override
+    async def fetch_inventory(self, wait_for_tags: bool = True) -> List[HfTag]:  # type: ignore
+        """
+        Can be called when an inventory has been started. Waits until at least one tag is found
+        and returns all currently scanned transponders from a continuous scan
+
+        Args:
+            wait_for_tags (bool): Set to true, to wait until transponders are available
+
+        Returns:
+            List[HfTag]: a list with the transponder found
+        """
+        return await super().fetch_inventory(wait_for_tags)  # type: ignore
+
+    ###############################################################################################
+    # Internal methods
+    ###############################################################################################
+
+    # @override
+    async def _config_reader(self) -> None:
+        await super()._config_reader()
+        await self.enable_rf_interface()
+
+    # @override
+    def _data_received(self, data: str, timestamp: float):
+        # disable 'Too many return statements' warning - pylint: disable=R0911
+        self.get_logger().debug("data received %s", data.replace(
+            "\r", "<CR>").replace("\n", "<LF>"))
+        data = data[:-1]
+        if data[0] == 'H' and data[2] == 'T':  # HBT
+            return
+        if data[0] == 'T':
+            if data[1] == 'D' or data[1] == 'N':  # TDT TND
+                self._parse_request(data)
+                return
+        if data[0] == 'I':
+            if data[1] == 'V':  # IVF
+                self._parse_inventory(data)
+                return
+        if data[0] == 'R' and data[2] == 'W':  # RNW Registers Not Written
+            self._rfi_enabled = False
+            return
+        if data[0] == 'S':
+            if data.startswith("SRT"):
+                # TODO Reader reset
+                return
+        if len(data) >= 10 and data[-6:-3] == 'IVF':
+            self._parse_inventory(data)
+            return
+        self._add_data_to_receive_buffer(data)
+
+    async def _get_last_inventory(self, command: str, *parameters, timeout: float = 2.0) -> Dict[str, Any]:
+        """
+        Args:
+            command (str): the command with a inventory response
+
+            timeout (float): response timeout, default to 2.0
+
+        Raises:
+            TimeoutError: if a timeout occurs
+
+        Returns:
+            List[Tag]: inventory response
+        """
+        await self._communication_lock.acquire()
+        try:
+            self._last_inventory['timestamp'] = None
+            self._last_inventory['request'] = self._prepare_command(
+                command, *parameters)
+            self._send_command(command, *parameters)
+            max_time = time() + timeout
+            while max_time > time():
+                await asyncio.sleep(0.01)
+                if self._last_inventory['timestamp']:
+                    break
+            else:
+                if self._rfi_enabled:
+                    raise TimeoutError(
+                        "no reader response for inventory command")
+                raise RfidReaderException("RF interface not enabled")
+            return self._last_inventory
+        finally:
+            self._communication_lock.release()
+
+    # @override
+    def _parse_inventory(self, data: str) -> None:
+        # E0040150954F02B1<CR>E200600311753E33<CR>ARP 12<CR>IVF 02
+        timestamp = time()
+        split = data.split('\r')
+        inventory: List[HfTag] = []
+        inventory_error: List[HfTag] = []
+        for line in split[0:-1]:
+            if line[1] == "R" and line[2] == "P":  # ARP  Antenna report
+                antenna = int(line[-2:])
+                for tag in inventory:
+                    tag.set_antenna(antenna)
+                continue
+            new_tag = HfTag(line, timestamp)
+            inventory.append(new_tag)
+        self._last_inventory['transponders'] = inventory
+        self._last_inventory['errors'] = inventory_error
+        self._last_inventory['timestamp'] = timestamp
+        self._fire_inventory_event(inventory)  # type: ignore
+
     async def _send_request(self, command: str, tag_command: str, data: Optional[str],
-                            tag_id: Optional[str] = None, option_flag: bool = False) -> Dict[str, Any]:
+                            tag_id: Optional[str] = None, option_flag: bool = False) -> HfTag:
         """_summary_
 
         Args:
@@ -367,157 +510,8 @@ class HfReaderGen1(ReaderGen1):
         else:
             flags = f"{'4' if option_flag else '0'}{'2' if self._config.get('single_sub_carrier', True) else '3'}"\
                 f"{tag_command}{data if data else ''}"
-        response: Dict[str, Any] = await self._get_last_request(command, flags, "CRC")
+        response = await self._get_last_request(command, flags, "CRC")
         return response
-
-    async def read_tag_information(self, tag_id: Optional[str] = None,
-                                   option_flag: bool = False) -> Dict[str, Any]:
-        """read the transponder information
-
-        Args:
-            tag_id (str, optional): transponder to be read, if not set, the currently available transponder is read
-
-            option_flag (bool, optional): Meaning is defined by the tag command description.
-
-        Raises:
-            RfidReaderException: if an reader error occurs
-
-        Returns:
-            Dict['data', str]: The transponder data
-
-            Dict['error', str: The transponder error if data is empty
-
-            Dict['timestamp', float]: the timestamp
-        """
-        response: Dict[str, Any] = await self._send_request("REQ", "2B", None, tag_id, option_flag)
-        data = response['data']
-        if data:
-            info_flag = int(data[0:2], 16)
-            response['is_dsfid'] = (bool)(info_flag & 0x01)
-            if response['is_dsfid']:
-                response['dsfid'] = int(data[16:18], 16)
-            response['is_afi'] = (bool)(info_flag & 0x02)
-            if response['is_afi']:
-                response['afi'] = int(data[18:20], 16)
-            response['is_vicc'] = (bool)(info_flag & 0x04)
-            if response['is_vicc']:
-                response['vicc_number_of_block'] = int(data[20:22], 16) + 1
-                response['vicc_block_size'] = (int(data[22:24], 16) & 0x3F) + 1
-            response['is_icr'] = (bool)(info_flag & 0x08)
-            if response['is_icr']:
-                response['icr'] = int(data[24:26], 16)
-        return response
-
-    async def write_tag_data(self, block_number: int, data: str, tag_id: Optional[str] = None,
-                             option_flag: bool = False) -> Dict[str, Any]:
-        """write the usr memory of the found transponder
-
-        Args:
-            block_number (int): block to write
-
-            data (str): data to write
-
-            tag_id (str, optional): transponder to be write, if not set, the currently available transponder is write
-
-            option_flag (bool, optional): Meaning is defined by the tag command description.
-
-        Raises:
-            RfidReaderException: if an reader error occurs
-
-        Returns:
-            Dict['data', str]: The read transponders
-
-            Dict['error', str]: the error message if data
-
-            Dict['timestamp', float]: the timestamp
-        """
-        return await self._send_request("WRQ", "21", f"{block_number:02X}{data}", tag_id, option_flag)
-
-    async def write_tag_afi(self, afi: int, tag_id: Optional[str] = None,
-                            option_flag: bool = False) -> Dict[str, Any]:
-        """write the transponder application family identifier value
-
-        Args:
-            afi (int): the application family identifier to set
-
-            tag_id (str, optional): transponder to be write, if not set, the currently available transponder is write
-
-            option_flag (bool, optional): Meaning is defined by the tag command description.
-
-        Raises:
-            RfidReaderException: if an reader error occurs
-
-        Returns:
-            Dict['data', str]: The read transponders
-
-            Dict['error', str]: the error message if data
-
-            Dict['timestamp', float]: the timestamp
-        """
-        return await self._send_request("WRQ", "27", f"{afi:02X}", tag_id, option_flag)
-
-    async def lock_tag_afi(self, tag_id: Optional[str] = None, option_flag: bool = False) -> Dict[str, Any]:
-        """Lock the transponder application family identifier
-
-        Args:
-            tag_id (str, optional): transponder to be write, if not set, the currently available transponder is write
-
-            option_flag (bool, optional): Meaning is defined by the tag command description.
-
-        Raises:
-            RfidReaderException: if an reader error occurs
-
-        Returns:
-            Dict['data', str]: The read transponders
-
-            Dict['error', str]: the error message if data
-
-            Dict['timestamp', float]: the timestamp
-        """
-        return await self._send_request("WRQ", "28", None, tag_id, option_flag)
-
-    async def write_tag_dsfid(self, dsfid: int, tag_id: Optional[str] = None,
-                              option_flag: bool = False) -> Dict[str, Any]:
-        """write the transponder data storage format identifier
-
-        Args:
-            dsfid (int): the data storage format identifier to set
-
-            tag_id (str, optional): transponder to be write, if not set, the currently available transponder is write
-
-            option_flag (bool, optional): Meaning is defined by the tag command description.
-
-        Raises:
-            RfidReaderException: if an reader error occurs
-
-        Returns:
-            Dict['data', str]: The read transponders
-
-            Dict['error', str]: the error message if data
-
-            Dict['timestamp', float]: the timestamp
-        """
-        return await self._send_request("WRQ", "29", f"{dsfid:02X}", tag_id, option_flag)
-
-    async def lock_tag_dsfid(self, tag_id: Optional[str] = None, option_flag: bool = False) -> Dict[str, Any]:
-        """Lock the transponder data storage format identifier
-
-        Args:
-            tag_id (str, optional): transponder to be write, if not set, the currently available transponder is write
-
-            option_flag (bool, optional): Meaning is defined by the tag command description.
-
-        Raises:
-            RfidReaderException: if an reader error occurs
-
-        Returns:
-            Dict['data', str]: The read transponders
-
-            Dict['error', str]: the error message if data
-
-            Dict['timestamp', float]: the timestamp
-        """
-        return await self._send_request("WRQ", "2A", None, tag_id, option_flag)
 
     def _parse_request(self, data: str) -> None:
         # TDT<CR>0011112222B7DD<CR>COK<CR>NCL<CR>
@@ -527,9 +521,10 @@ class HfReaderGen1(ReaderGen1):
         error = ""
         split = data.split('\r')
         last_element = len(split) - 1
+        antenna = None
         if "ARP" in split[last_element]:
             # Antenna report added
-            self._last_request['antenna'] = int(split[last_element][4])
+            antenna = int(split[last_element][4])
             last_element -= 1
         if split[last_element] == "NCL":
             if split[2] == "COK":
@@ -544,13 +539,14 @@ class HfReaderGen1(ReaderGen1):
             # TNR - Tag not responding - no tag
             # RDL - read data too long
             error = split[last_element]
-        self._last_request['data'] = tag_data
-        self._last_request['error'] = error
-        self._last_request['timestamp'] = timestamp
+        tag = HfTag(self._last_request['tid'], timestamp, antenna)
+        tag.set_error_message(error)
+        tag.set_data(tag_data)
+        self._last_request['response'] = tag
         if self._cb_request and tag_data:
-            self._cb_request(tag_data)
+            self._cb_request(tag)
 
-    async def _get_last_request(self, command: str, *parameters, timeout: float = 2.0) -> Dict[str, Any]:
+    async def _get_last_request(self, command: str, *parameters, timeout: float = 2.0) -> HfTag:
         """
         Args:
             command (str): the command with a inventory response
@@ -566,7 +562,8 @@ class HfReaderGen1(ReaderGen1):
         await self._communication_lock.acquire()
         try:
             self._last_request['timestamp'] = None
-            self._last_request['request'] = self._prepare_command(command, *parameters)
+            self._last_request['request'] = self._prepare_command(
+                command, *parameters)
             self._send_command(command, *parameters)
             max_time = time() + timeout
             while max_time > time():
@@ -575,8 +572,9 @@ class HfReaderGen1(ReaderGen1):
                     break
             else:
                 if self._rfi_enabled:
-                    raise TimeoutError("no reader response for inventory command")
+                    raise TimeoutError(
+                        "no reader response for inventory command")
                 raise RfidReaderException("RF interface not enabled")
-            return self._last_request
+            return self._last_request['response']
         finally:
             self._communication_lock.release()

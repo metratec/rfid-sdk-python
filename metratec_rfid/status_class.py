@@ -55,7 +55,7 @@ class BaseClass:
         """
         Set the callback for status changes. The callback has the following arguments:
         * status (Dict[str, Any]) - the new reader status dictionary, which contains at
-          least the 'status', the 'message', 'timestamp' and the instance name if specified
+        least the 'status', the 'message', 'timestamp' and the instance name if specified
 
         Returns:
             Optional[Callable]: the old callback

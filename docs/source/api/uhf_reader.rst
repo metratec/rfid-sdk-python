@@ -55,3 +55,25 @@ collision mode) is also possible.
     :inherited-members:
     :exclude-members: get_input, get_inputs, get_output, get_outputs, get_antenna, set_antenna, get_antenna_multiplex, set_antenna_multiplex, set_antenna_outputs, set_cb_input_changed, enable_antenna_report
     :special-members: __init__
+
+DeskID UHF v2 Desktop Reader
+----------------------------
+
+.. image:: ./../_static/deskid-uhf.jpg
+   :alt: DeskId Uhf
+   :align: right
+
+The DeskID UHF v2 is a compact RFID reader/writer working at 868 MHz (ETSI/EU version) or 902 – 928 MHz (FCC/USA version).
+Its main use is to read and write data to EPC Gen 2 transponders directly from your PC or laptop. Thus, the device is a handy tool
+for all UHF applications for testing tags, writing an EPC, or just debugging your UHF gate.
+
+The slim, well-designed housing fits on every desktop and is connected to the PC using a normal USB-C cable which is also used to power
+the device (no separate power supply necessary). Thanks to the new E310 Reader IC from Impinj used in the device, the read range is
+between 10 and 80 cm, depending on the type of transponder used. You can also read up to 50 transponders simultaneously with the
+integrated anti-collision mode.
+
+.. autoclass:: metratec_rfid.DeskIdUhf2
+    :members:
+    :inherited-members:
+    :exclude-members:  check_antennas, enable_input_events, get_antenna, get_antenna_multiplex, get_input, get_inputs, get_inventory_multi, get_output, get_outputs, set_antenna, set_antenna_multiplex, set_cb_input_changed, set_output, set_outputs, start_inventory_multi, stop_inventory_multi
+    :special-members: __init__

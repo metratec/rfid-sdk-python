@@ -3,19 +3,33 @@
 Release Notes
 #############
 
+
+1.2.0
+=====
+
+:Release Date: 2023-10-19
+
+* nfc reader added (DeskID NFC)
+* transponder exceptions added
+* tag getter and setter methods updated
+* uhf ascii reader - inventory bug fixed
+* uhf at reader
+  * phase information now available
+  * mask commands updated
+
 1.1.3
 =====
 
 :Release Date: 2023-10-19
 
-* Gen1 UHF - Memory Access Errors will now be handled correctly
+* UHF Acsii reader - Memory Access Errors will now be handled correctly
 
 1.1.2
 =====
 
 :Release Date: 2023-10-16
 
-* Gen1 UHF - reading the reserved transponder memory now works as expected
+* UHF Acsii reader - reading the reserved transponder memory now works as expected
 
 1.1.1
 =====

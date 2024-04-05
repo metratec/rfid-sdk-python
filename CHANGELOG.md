@@ -1,5 +1,15 @@
 # Release Notes
 
+## 1.2.0
+
+* nfc reader added
+* transponder exceptions added
+* tag getter and setter methods updated
+* uhf ascii reader - inventory bug fixed
+* uhf at reader
+  * phase information now available
+  * mask commands updated
+
 ## 1.1.3
 
 * Gen1 UHF - Memory Access Errors will now be handled correctly

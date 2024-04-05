@@ -2,17 +2,14 @@
 """
 
 
-from typing import List
-
 from .reader import ExpectedReaderInfo
-from .reader_exception import RfidReaderException
 from .connection.serial_connection import SerialConnection
-from .uhf_reader_ascii import UhfReaderGen1
-from .uhf_reader_at import UhfReaderGen2
+from .uhf_reader_ascii import UhfReaderAscii
+from .uhf_reader_at import UhfReaderAT
 
 
 @ExpectedReaderInfo("DESKID_UHF", "DESKID_UHF", 3.15)
-class DeskIdUhf(UhfReaderGen1):
+class DeskIdUhf(UhfReaderAscii):
     """metraTec DeskID Uhf
     """
 
@@ -30,7 +27,7 @@ class DeskIdUhf(UhfReaderGen1):
 
 
 @ExpectedReaderInfo("DeskID_UHF_v2_E", "DeskID_UHF_v2_E", 1.0)
-class DeskIdUhf2(UhfReaderGen2):
+class DeskIdUhf2(UhfReaderAT):
     """metraTec DeskID Uhf
     """
 
@@ -55,7 +52,7 @@ class DeskIdUhf2(UhfReaderGen2):
         Raises:
             RfidReaderException: if an reader error occurs
         """
-        await self._send_command("AT+PWR", power)
+        await super().set_power(power)
 
     async def get_power(self) -> int:
         """Return the current power level
@@ -66,10 +63,4 @@ class DeskIdUhf2(UhfReaderGen2):
         Returns:
             int: the current power level
         """
-        response: List[str] = await self._send_command("AT+PWR?")
-        # +PWR: 12
-        try:
-            return int(response[0][6:])
-        except IndexError as exc:
-            raise RfidReaderException(
-                f"Not expected response for command AT+PWR? - {response}") from exc
+        return await super().get_power()
