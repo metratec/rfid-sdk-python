@@ -1,22 +1,10 @@
-.. metraTec rfid documentation master file, created by
-   sphinx-quickstart on Fri Feb 24 13:55:52 2023.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
-Welcome to the Metratec RFID SKD
+Welcome to the Metratec RFID SDK
 ================================
 
-An Asyncio based library for Metratec RFID readers written in Python 3.
+An asyncio based library for Metratec RFID readers written in Python 3.
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
-User's Guide
-============
+User Guide
+==========
 
 This chapter details how to install and use the library.
 
@@ -26,7 +14,7 @@ This chapter details how to install and use the library.
    foreword
    installation
    quickstart
-   tutorials/index
+   tutorials
 
 API Reference
 =============
@@ -35,19 +23,28 @@ If you are looking for information on a specific function, class or
 method, this part of the documentation is for you.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    api/api
 
 
-Additional Notes
-================
+Additional Information
+======================
 
-Design notes, legal information and changelog are here for the
-interested.
+This part contains the library changelog and legal information.
 
 .. toctree::
    :maxdepth: 1
 
    changelog
    license
+
+Index
+==================
+
+The :ref:`genindex` page provides an alphabetical listing of all classes,
+methods and other relevant elements.
+
+.. These two seem broken
+.. * :ref:`modindex`
+.. * :ref:`search`

@@ -1,70 +1,54 @@
 .. _quickstart:
 
-Quick-start
-###########
+Quickstart
+##########
 
-Connect a reader and read a transponder
-=======================================
+The main part of the library are the reader objects.
+The following code snippets use one of the readers as an example.
+You have to use the class that matches your device.
+
+The :ref:`api` section contains detailed information about each reader.
+
+- UHF ASCII reader (legacy): :ref:`DeskIdUhf<DeskIdUhf>`, :ref:`PulsarMX<PulsarMX>`
+- HF ASCII reader (legacy): :ref:`DeskIdIso<DeskIdIso>`, :ref:`QuasarLR<QuasarLR>`,
+  :ref:`QuasarMX<QuasarMX>`
+- UHF AT reader: :ref:`PulsarLR<PulsarLR>`, :ref:`Plrm<Plrm>`, 
+  :ref:`DeskIdUhfv2<DeskIdUhfv2>`, :ref:`DeskIdUhfv2FCC<DeskIdUhfv2FCC>`,
+  :ref:`ORG2<QRG2>`, :ref:`QRG2FCC<QRG2FCC>`, :ref:`DwarfG2v2<DwarfG2v2>`,
+  :ref:`DwarfG2Miniv2<DwarfG2Miniv2>`, :ref:`DwarfG2XRv2<DwarfG2XRv2>`
+- NFC AT reader: :ref:`DeskIdNfc<DeskIdNfc>`, :ref:`QrNfc<QrNfc>`
+
+
+Minimal inventory example
+=========================
+
+This is a minimal example that shows reader object initialization,
+runs a single inventory and prints the result.
+
+Attention! You have to adapt the reader class to match your conditions.
 
 ::
 
-  import asyncio
-  from metratec_rfid import DeskIdIso
+    import asyncio
+    from metratec_rfid import RfidReaderException
+    # Attention! Change the reader class to match your device.
+    from metratec_rfid import DeskIdUhfv2
 
 
-  async def print_inventory(serial_port: str):
-
-      deskid = DeskIdIso(instance="reader01", serial_port=serial_port)
-      await deskid.connect()
-      print(await deskid.get_inventory())
-      await deskid.disconnect()
-
-
-  loop = asyncio.new_event_loop()
-  loop.run_until_complete(print_inventory("/dev/ttyUSB0"))
-
+    async def print_inventory(reader):
+        """Connect the reader, run a single inventory and print the result.
+        """
+        try:
+            await reader.connect()
+            print(await reader.get_inventory())
+            await reader.disconnect()
+        except RfidReaderException as e:
+            print(e)
 
 
-Using of the status and inventory callback
-==========================================
-
-::
-
-  import asyncio
-
-  from metratec_rfid import PulsarLR
-  from metratec_rfid import RfidReaderException
-  
-  
-  async def main():
-  
-      # Create an instance and define the serial connection
-      reader = PulsarLR(instance="Reader", hostname="192.168.2.239")
-      # set a callback for the reader status
-      reader.set_cb_status(lambda status: print(f"status changed: {status}"))
-      # set a callback for the inventories
-      reader.set_cb_inventory(lambda inventory: print(f"new inventory: {inventory}"))
-  
-      # connect the reader
-      try:
-          await reader.connect()
-          # set the reader power
-          await reader.set_power(17)
-          # start the inventory
-          await reader.start_inventory()
-          await asyncio.sleep(60)
-          await reader.stop_inventory()
-  
-      except RfidReaderException as err:
-          print(f"Reader exception: {err}")
-      finally:
-          try:
-              await reader.disconnect()
-          except RfidReaderException as err:
-              print(f"Error disconnect: {err}")
-  
-      # Program finished
-  
-  if __name__ == '__main__':
-      loop = asyncio.new_event_loop()
-      loop.run_until_complete(main())
+    # Create a new reader object and run the example function.
+    # Attention! Change the serial port according to your PC.
+    SERIAL_PORT = "COM41"  # "/dev/ttyUSB0"
+    # Attention! Change the reader class to match your device.
+    reader01 = DeskIdUhfv2("reader01", SERIAL_PORT)
+    asyncio.run(print_inventory(reader01))

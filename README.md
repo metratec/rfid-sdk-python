@@ -2,13 +2,28 @@
 
 An Asyncio based library to control Metratec RFID readers with Python 3.
 
-## Using the Library
+## Documentation
+
+The folder `metratec_rfid-doc` contains the HTML documentation of the
+library. Simply open the `index.html` file to view it.
+
+## Installation
+
+### Requirements
+
+It is assumed that Python 3 is already installed on the system, including the package installer *pip*.
+
+In case of installation issues, consider upgrading the build tools to the latest version:
+
+```
+pip install -U pip setuptools
+```
 
 ### Create virtual environment
 
-To use the library without installing it into your global Python packages, you can create a virtual environment.
+To use the library without installing it into your global Python packages, it is recommended to use a virtual environment.
 
-#### Linux
+#### Linux / Mac
 
 * Create virtual environment in the subfolder env: `python3 -m venv env`  
 * Activate the virtual environment: `source env/bin/activate`  
@@ -20,21 +35,93 @@ To use the library without installing it into your global Python packages, you c
 * Activate the virtual environment: `env\Scripts\activate.bat`  
 (* Deactivate: `env\Scripts\deactivate.bat`)
 
-### Install the library
+### Install RFID SDK
 
-To install this library call the setup.py file with the following command:
+The library is packaged into an archive and can be installed via pip:
 
-`python setup.py install`
+```
+python -m pip install metratec_rfid-1.3.0.tar.gz
+```
 
-### Call the example files
+## Usage
 
-Go into the "example" folder and call in the console following command:
+The main part of the library are the reader objects:
 
-`python inventory_simple_deskid_iso.py`
+- UHF ASCII reader (legacy): `DeskIdUhf`, `PulsarMX`
+- HF ASCII reader (legacy): `DeskIdIso`, `QuasarLR`, `QuasarMX`
+- UHF AT reader: `PulsarLR`, `Plrm`, `DeskIdUhfv2`, `DeskIdUhfv2FCC`, `QRG2`, `QRG2FCC`, `DwarfG2v2`, `DwarfG2Miniv2`, `DwarfG2XRv2`
+- NFC AT reader: `DeskIdNfc`, `QrNfc`
 
-### Uninstall library
+Import the reader class matching your device and create a new object by giving it a name and specifying the connection port.
 
-* `python -m pip uninstall metratec_rfid`
+```python
+from metratec_rfid import DeskIdUhfv2
+reader = DeskIdUhfv2("MyReader", "COM41")
+```
+
+Afterwards, connect the reader once and call whatever reader functions you wish to execute.
+
+```python
+await reader.connect()
+await reader.get_inventory()
+```
+
+See the code examples for complete sample applications and reference the documentation for more info and a complete list of reader methods.
+
+### Example files
+
+The `examples` folder contains sample applications using this library.
+
+#### Minimal example
+To get started right away, identify the proper reader class for your device and run the following example. The given arguments are examples and have to be adapted. The first argument must match the reader class name and the second argument specifies the connection port.
+
+```
+python examples/inventory_minimal_cmd.py DeskIdUhfv2 /dev/ttyUSB0
+```
+
+This will create the appropriate reader object, run a single inventory and print the result.
+
+The following example executes the same reader functions but does not use commandline arguments. It explicitly shows how to import and initialize a single reader object. This means, in order to run this example, you will have to adapt some lines inside the file to fit your device.
+
+```
+python examples/inventory_minimal.py
+```
+
+#### General examples
+
+The following examples show different base features of the library in isolation.
+They all use the same commandline utility as the minimal example and are designed to work with any RFID reader device. 
+
+How to use inventory callbacks:
+
+```
+python examples/inventory_callback_example.py DeskIdUhfv2 COM41
+```
+
+How to fetch results from a continuous inventory:
+
+```
+python examples/inventory_fetch_example.py PulsarLR 192.168.2.153
+```
+
+How to change the EPC value of a tag that is specified by its tag ID
+(for UHF readers).
+
+```
+python examples/write_epc_uhf.py QRG2 /dev/ttyUSB0
+```
+
+#### Other examples
+
+Any other examples may only work on specific readers. Take a look at the individual files to learn more.
+
+While many reader methods are shared among different reader types, there are some key differences between them. For a comprehensive list of functions for any specific reader, reference the documentation.
+
+## Uninstalling the library
+
+```
+python -m pip uninstall metratec_rfid
+```
 
 ## License
 

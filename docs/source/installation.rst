@@ -3,33 +3,66 @@ Installation
 
 .. note::
 
-   This library is known to support Python versions 3.9 and higher.
+   This library is known to support Python versions 3.10 and higher.
 
-Basic Installation
-------------------
+Requirements
+^^^^^^^^^^^^
 
-Installing PyLink with **pip**:
+It is assumed that Python 3 is already installed on the system, including the package installer *pip*.
 
-.. code:: bash
-
-   $ pip install metratec_rfid
-
-
-Building From Source
---------------------
-
-Clone the project into a local repository, then navigate to that directory and run:
+In case of installation issues, consider upgrading the build tools to the latest version:
 
 .. code:: bash
 
-   $ python setup.py install
+   pip install -U pip setuptools
 
-This will give you the tip of **main** (the development branch).  While we
-strive for this to be stable at all times, some bugs may be introduced, so it is
-best to check out a release branch first before installing.
+Create virtual environment
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To use the library without installing it into your global Python packages, it is recommended to use a virtual environment.
+
+Linux / Mac
+"""""""""""
+
+* Create virtual environment in the subfolder env: ``python3 -m venv env``  
+
+* Activate the virtual environment: ``source env/bin/activate``
+
+(* Deactivate: ``deactivate``)
+
+Windows
+"""""""
+
+* Create virtual environment in the subfolder env: ``python -m venv env`` 
+
+* Activate the virtual environment: ``env\Scripts\activate.bat``
+
+(* Deactivate: ``env\Scripts\deactivate.bat``)
+
+Install RFID SDK
+^^^^^^^^^^^^^^^^
+
+Clone the repository and change into its directory: 
 
 .. code:: bash
 
-   $ git checkout r{major}.{minor}.{patch}
-   $ python setup.py install
+   git clone https://github.com/metratec/rfid-sdk-python.git
+   cd rfid-sdk-python
 
+Preferably check out a release version (see `Github tags <https://github.com/metratec/rfid-sdk-python/tags>`_), for example: 
+
+.. code:: bash
+
+   git checkout r1.3.0
+
+Install the *metratec_rfid* library: 
+
+.. code:: bash
+
+   python -m pip install .
+
+Alternatively, install a specific version from Github directly:
+
+.. code:: bash
+
+   python -m pip install git+https://github.com/metratec/rfid-sdk-python@r1.3.0

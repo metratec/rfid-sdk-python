@@ -23,16 +23,13 @@ class HfTag(Tag):
         self.set_seen_count(seen_count)
 
     def get_id(self) -> str:
-        identifier: Optional[str] = self.get_tid()
-        return identifier if identifier else "unknown"
-
-    def get_tid(self) -> str:
-        """Return the tid
+        """Return the identifier of this tag.
 
         Returns:
-            str: the tid
+            str: The TID value or "unknown" if not available.
         """
-        return self.get('tid', "")
+        identifier: Optional[str] = self.get_tid()
+        return identifier if identifier else "unknown"
 
     def set_type(self, tag_type: str):
         """Sets the transponder type
@@ -65,18 +62,18 @@ class ISO15Tag(HfTag):
             self.set_dsfid(dsfid)
 
     def get_dsfid(self) -> str:
-        """Return the dsfid byte as hex
+        """Return the DSFID byte of this transponder.
 
         Returns:
-            str: the dsfid byte as hex
+            str: The DSFID byte as hex number.
         """
         return self.get('dsfid', '')
 
     def set_dsfid(self, dsfid: str) -> None:
-        """Set the dsfid byte as hex
+        """Set the DSFID byte value of this transponder.
 
         Args:
-            dsfid (str): the dsfid byte as hex
+            dsfid (str): The DSFID byte as hex number.
         """
         self.set_value('dsfid', dsfid)
 
@@ -98,34 +95,34 @@ class ISO14ATag(HfTag):
             self.set_atqa(atqa)
 
     def get_sak(self) -> str:
-        """Return the sak byte as hex
+        """Return the SAK byte of this transponder.
 
         Returns:
-            str: the sak byte as hex
+            str: The SAK byte as hex number.
         """
         return self.get('sak', '')
 
     def set_sak(self, sak: str) -> None:
-        """Set the sak byte as hex
+        """Set the SAK byte value of this transponder.
 
         Args:
-            sak (str): the dsfid byte as hex
+            sak (str): The SAK byte value as hex number.
         """
         self.set_value('sak', sak)
 
     def get_atqa(self) -> str:
-        """Return the atqa bytes as hex
+        """Return the ATQA bytes of this transponder.
 
         Returns:
-            str: the atqa bytes as hex
+            str: The ATQA bytes as hex number.
         """
         return self.get('atqa', '')
 
     def set_atqa(self, atqa: str) -> None:
-        """Set the atqa bytes as hex
+        """Set the ATQA bytes value of this transponder.
 
         Args:
-            atqa (str): the atqa bytes as hex
+            atqa (str): The ATQA bytes value as hex number.
         """
         self.set_value('atqa', atqa)
 
@@ -158,74 +155,74 @@ class HfTagInfo(HfTag):
                 self.set_value('icr', int(tag_info[24:26], 16))
 
     def is_dsfid(self) -> bool:
-        """Return if the DSFID field is supported by this transponder
+        """Return whether the DSFID field is supported by this transponder.
 
         Returns:
-            bool: if True, the DSFID field is present
+            bool: True if the DSFID field is present.
         """
         return self.get('is_dsfid', False)
 
     def get_dsfid(self) -> int:
-        """Returns the Data storage format identifier (DSFID) if present
+        """Return the Data Storage Format Identifier (DSFID) if present.
 
         Returns:
-            int: the DSFID of this transponder
+            int: The DSFID of this transponder.
         """
         return self.get('dsfid', None)
 
     def is_afi(self) -> bool:
-        """Return if the AFI field is supported by this transponder
+        """Return whether the AFI field is supported by this transponder.
 
         Returns:
-            bool: if True, the AFI field is present
+            bool: True if the AFI field is present.
         """
         return self.get('is_afi', False)
 
     def get_afi(self) -> int:
-        """Returns the Application family identifier (API) if present
+        """Returns the Application Family Identifier (AFI) if present.
 
         Returns:
-            int: the API of this transponder
+            int: The AFI of this transponder.
         """
         return self.get('afi', None)
 
     def is_vicc(self) -> bool:
-        """Return if the VICC memory information is supported by this transponder
+        """Return if the VICC memory information is supported by this transponder.
 
         Returns:
-            bool: if True, the VICC memory information is present
+            bool: True if the VICC memory information is present.
         """
         return self.get('is_vicc', False)
 
     def get_vicc_number_of_block(self) -> int:
-        """Returns the number of available memory block for this transponder
+        """Return the number of available memory blocks for this transponder.
 
         Returns:
-            int: the number of memory blocks
+            int: The number of memory blocks.
         """
         return self.get('vicc_number_of_block', None)
 
     def get_vicc_block_size(self) -> int:
-        """Returns the memory block size for this transponder
+        """Returns the memory block size of this transponder.
 
         Returns:
-            int: the memory block size
+            int: The memory block size.
         """
         return self.get('vicc_block_size', 0)
 
     def is_icr(self) -> bool:
-        """Return if the IC reference is supported by this transponder
+        """Return whether the IC reference is supported by this transponder.
 
         Returns:
-            bool: if True, the IC reference is present
+            bool: True if the IC reference is present.
         """
         return self.get('is_icr', False)
 
     def get_icr(self) -> int:
-        """Returns the IC reference for this transponder
+        """Returns the IC reference for this transponder.
 
         Returns:
-            int: the IC reference
+            int: The IC reference.
         """
         return self.get('icr', None)
 

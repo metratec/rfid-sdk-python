@@ -1,9 +1,9 @@
-""" reader exception  """
+"""Reader exception classes"""
 
 
 class RfidReaderException(Exception):
     """
-    Exception class for the metratec rfid reader
+    Exception class for the Metratec RFID reader
     """
 
     def __init__(self, message) -> None:

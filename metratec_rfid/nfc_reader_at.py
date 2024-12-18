@@ -14,7 +14,7 @@ from .reader_at import ReaderAT
 
 
 class Mode(Enum):
-    """The nfc reader operation mode
+    """The NFC reader operation mode
     """
     AUTO = 1
     """Autodetect the necessary mode"""
@@ -58,35 +58,39 @@ class NfcReaderAT(ReaderAT):
     ###################################################################################################################
 
     async def enable_rf_interface(self):
-        """Enable the reader rf interface
+        """Enable the readers RF interface.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
         """
         await self._send_command("AT+CW", 1)
 
     async def disable_rf_interface(self):
-        """Enable the reader rf interface
+        """Disable the readers RF interface.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
         """
         await self._send_command("AT+CW", 0)
 
     async def set_mode(self, mode: Mode):
-        """Set the reader operation mode
+        """Set the readers operation mode.
 
         Args:
-            mode (Mode, optional): Mode.ISO15, Mode.ISO14A Defaults to Mode.ISO15.
+            mode (Mode, optional): Mode.ISO15 or Mode.ISO14A.
+                Defaults to Mode.ISO15.
+
+        Raises:
+            RfidReaderException: If a reader error occurs.
         """
         await self._send_command("AT+MOD", mode.name)
         self._mode = mode
 
     async def get_mode(self) -> Mode:
-        """Returns the current reader mode
+        """Return the current reader mode.
 
         Returns:
-            Mode: the current operation mode
+            Mode: The current operation mode.
         """
         responses = await self._send_command("AT+MOD?")
         #  +MOD: AUTO
@@ -95,16 +99,17 @@ class NfcReaderAT(ReaderAT):
         return mode
 
     async def config_rf_interface(self, is_single_sub_carrier: bool = True, modulation_depth: int = 100) -> None:
-        """configure the reader rf interface
+        """Configure the readers RF interface.
 
         Args:
-            is_single_sub_carrier (bool): if True, the single sub carrier otherwise the double sub carrier mode is used.
-            Default is True
+            is_single_sub_carrier (bool): If True, the single sub carrier
+                mode is used (default).
+                Otherwise it will be the double sub carrier mode.
 
-            modulation_depth: modulation depth, 10% or 100%. Default is 100
+            modulation_depth: Modulation depth, 10% or 100%. Default is 100%.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
         """
         if modulation_depth not in (10, 100):
             raise RfidReaderException("Modulation depth must be 100 or 10")
@@ -117,23 +122,27 @@ class NfcReaderAT(ReaderAT):
 
     async def set_inventory_settings(self, enable_tag_details: bool = True, only_new_tags: bool = False,
                                      single_slot: bool = False) -> None:
-        """Configure the inventory response
+        """Configure the inventory response.
 
         Args:
-            enable_tag_details (bool, optional): To add additional information about the tag
-            in the inventory response. Only if the reader is not in AUTO mode. Defaults to True.
+            enable_tag_details (bool, optional): To add additional information
+                about the tag in the inventory response.
+                Only if the reader is not in AUTO mode. Defaults to True.
 
-            only_new_tags (bool, optional): If enabled, a Stay Quiet is sent to each tag in the
-            field after an successful inventory. This has the effect that any tag that remains in
-            the field is only found once in an inventory. Defaults to False.
+            only_new_tags (bool, optional): If enabled, a Stay Quiet is
+                sent to each tag in the field after a successful inventory.
+                This has the effect that any tag that remains in the field
+                is only found once in an inventory. Defaults to False.
 
-            single_slot (bool, optional): Has only an effect in ISO15 mode. If it is set to 1 ISO15
-            inventories will be run in single slotted mode, resulting in faster inventories. There
-            will be no anti-collision loop performed so an inventory with multiple tags in the field
-            will result in failure.Defaults to False.
+            single_slot (bool, optional): Has only an effect in ISO15 mode.
+                If it is set to 1 ISO15 inventories will be run in single
+                slotted mode, resulting in faster inventories. There will
+                be no anti-collision loop performed so an inventory with
+                multiple tags in the field will result in failure.
+                Defaults to False.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
         """
         await self._send_command("AT+INVS", 1 if enable_tag_details else 0, 1 if only_new_tags else 0, 1 if single_slot
                                  else 0)
@@ -145,13 +154,14 @@ class NfcReaderAT(ReaderAT):
         config['single_slot'] = single_slot
 
     async def get_inventory_settings(self) -> Dict[str, Any]:
-        """Gets the current reader inventory settings
+        """Get the current reader inventory settings.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
 
         Returns:
-            dict: with 'enable_tag_details', 'only_new_tags' and 'single_slot' entries
+            dict: Dictionary with keys 'enable_tag_details',
+            'only_new_tags' and 'single_slot'.
         """
         responses: List[str] = await self._send_command("AT+INVS?")
         # +INVS: 1,0,0
@@ -176,16 +186,34 @@ class NfcReaderAT(ReaderAT):
         return inventory
 
     async def get_inventory_multi(self, ignore_error: bool = False) -> List[HfTag]:
+        """Get an inventory from multiple antennas.
+
+        Antenna ports are chosen according to `set_antenna_multiplex()`.
+
+        Args:
+            ignore_error (bool, optional): Set to True to ignore antenna errors.
+                Defaults to False.
+
+        Raises:
+            RfidReaderException: If a reader error occurs.
+
+        Returns:
+            List[Tag]: An array with the transponders found.
+        """
+        # pylint: disable=unused-argument
+
         return await self.get_inventory()
 
     async def get_memory_sectors(self) -> List[HfTagMemory]:
-        """ **This command is only supported by some ISO15693 tag**
+        """Get memory information of tags in the field.
 
-        Returns:
-            List[HfTagMemory]: a list with the memory information of the found tags
+        **This command is only supported by some ISO15693 tag**
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
+
+        Returns:
+            List[HfTagMemory]: A list with the memory information of the found tags.
         """
         responses = await self._send_command(("AT+SCT?"))
         memory_infos: List[HfTagMemory] = []
@@ -199,10 +227,13 @@ class NfcReaderAT(ReaderAT):
         return memory_infos
 
     async def detect_tag_types(self) -> List[HfTag]:
-        """Detect the type of tags that are in the rf field.
+        """Detect the type of tags that are in the RF field.
+
+        Raises:
+            RfidReaderException: If a reader error occurs.
 
         Returns:
-            List[HfTag]: list with the detected tags
+            List[HfTag]: List with the detected tags.
         """
         responses = await self._send_command("AT+DTT")
         timestamp = time()
@@ -223,63 +254,68 @@ class NfcReaderAT(ReaderAT):
         return tags
 
     async def select_transponder(self, tid: str) -> None:
-        """Select a tag by its TID.
+        """Select a transponder by its tag ID.
 
         Args:
-            tid (str): The transponder tid
+            tid (str): The transponder TID.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
         """
         await self._send_command("AT+SEL", tid)
         self._selected_tag = tid
 
     async def get_selected_transponder(self) -> str:
-        """Get current selected transponder.
+        """Get the currently selected transponder.
 
         Returns:
-            str: the current selected transponder tid, if no transponder is selected, the return value is empty
+            str: The currently selected transponder TID.
+            If no transponder is selected, the return value is empty.
         """
         # await self._send_command("AT+SEL?")
         return self._selected_tag
 
     async def deselect_transponder(self) -> None:
-        """Deselect the current selected tag.
+        """Deselect the currently selected tag.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
         """
         await self._send_command("AT+DEL")
         self._selected_tag = ""
 
     async def write_data(self, block: int, data: str, option_flag: Optional[bool] = None) -> None:
-        """Write data to a block of the tags memory. Depending on the protocol a select and authenticate is needed
+        """Write data to a block of the tags memory.
+
+        Depending on the protocol a select and authenticate is needed
         prior to this command.
 
         Args:
-            block (int): Number of the block to write
-            data (str): Data to write to the card
-            option_flag (bool): Set to True if it needed, only in ISO15 mode.
+            block (int): Number of the block to write.
+            data (str): Data to write to the card.
+            option_flag (bool): Set to True if needed, only in ISO15 mode.
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
         """
         await self._send_command("AT+WRT", block, data, option_flag)
 
     async def read_data(self, block: int, number_of_blocks: int = 1) -> str:
-        """Read data from the card's memory. Depending on the protocol a select and authenticate is needed
+        """Read data from the cards memory.
+
+        Depending on the protocol a select and authenticate is needed
         prior to this command.
 
         Args:
-            block (int): the block (start block) to read
-            number_of_blocks (int): Number of blocks to be read, defaults to 1
+            block (int): The block (start block) to read.
+            number_of_blocks (int): Number of blocks to be read, defaults to 1.
 
         Returns:
-            str: the block data as hex string
+            str: The block data as hex string.
 
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
         """
 
         if number_of_blocks > 1:
@@ -292,18 +328,20 @@ class NfcReaderAT(ReaderAT):
         return responses[0][7:]
 
     async def read_data_with_option_flag(self, block: int, number_of_blocks: int = 1) -> tuple[str, str]:
-        """Read data from the card's memory with option flag. Only in ISO15 mode.
+        """Read data from the cards memory with option flag.
+
+        Only in ISO15 mode.
 
         Args:
-            block (int): the block (start block) to read
-            number_of_blocks (int): Number of blocks to be read, defaults to 1
+            block (int): The block (start block) to read.
+            number_of_blocks (int): Number of blocks to read, defaults to 1.
 
         Returns:
-            tuple[str, str]: data and the security block status byte as hex
+            tuple[str, str]: Data and the security block status byte as hex.
 
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
         """
         if number_of_blocks > 1:
             responses = await self._send_command("AT+READM", block, number_of_blocks, 1)
@@ -345,14 +383,14 @@ class NfcReaderAT(ReaderAT):
         """Send an ISO15693 read request with read-alike timing to a card.
 
         Args:
-            request (str): the request
+            request (str): The request.
 
         Returns:
-            str: the response
+            str: The response.
 
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
         """
         if self._mode is not Mode.ISO15:
             raise RfidReaderException("Only available in ISO15 mode!")
@@ -363,26 +401,27 @@ class NfcReaderAT(ReaderAT):
         """Send an ISO15693 write request with write-alike timing to a card.
 
         Args:
-            request (str): the request
+            request (str): The request.
 
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
         """
         if self._mode is not Mode.ISO15:
             raise RfidReaderException("Only available in ISO15 mode!")
         await self._send_command("AT+WRQ", request)
 
     async def set_afi(self, afi: str) -> None:
-        """This command set the "Application Family Identifier" for IOS15693 inventories.
-        An AFI of 0 is treated as no AFI set. If set to non-zero only transponders with
-        the same AFI will respond in a inventory.
+        """Set the Application Family Identifier for IOS15693 inventories.
+
+        An AFI of 0 is treated as no AFI set. If set to non-zero only
+        transponders with the same AFI will respond in a inventory.
 
         Args:
-            afi (str): Application Family Identifier as hex string [00..FF]
+            afi (str): Application Family Identifier as hex string [00..FF].
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
         """
         if isinstance(afi, int):
             afi = f"{afi:02X}"
@@ -391,28 +430,29 @@ class NfcReaderAT(ReaderAT):
         await self._send_command("AT+AFI", afi)
 
     async def get_afi(self) -> str:
-        """This command returns "Application Family Identifier" of the reader for IOS15693 inventories.
+        """Return the Application Family Identifier for IOS15693 inventories.
 
         Returns:
-            int: the "Application Family Identifier" of the reader
+            int: The Application Family Identifier of the reader.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
         """
         responses = await self._send_command("AT+AFI?")
         # +AFI: 0A
         return responses[0][6:]
 
     async def write_tag_afi(self, afi: str, option_flag: bool = False) -> None:
-        """Write the "Application Family Identifier" to an ISO15693 transponder.
+        """Write the Application Family Identifier to an ISO15693 transponder.
 
         Args:
-            afi (int): afi value
-            option_flag (bool, optional): ISO15693 request option flag. Defaults to False.
+            afi (int): AFI value.
+            option_flag (bool, optional): ISO15693 request option flag.
+                Defaults to False.
 
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
         """
         if isinstance(afi, int):
             afi = f"{afi:02X}"
@@ -421,27 +461,29 @@ class NfcReaderAT(ReaderAT):
         await self._send_command("AT+WAFI", afi, 1 if option_flag else 0)
 
     async def lock_tag_afi(self, option_flag: bool = False) -> None:
-        """Use to permanently lock the AFI of an ISO15693 transponder
+        """Permanently lock the AFI of an ISO15693 transponder.
 
         Args:
-            option_flag (bool, optional): ISO15693 request option flag. Defaults to False.
+            option_flag (bool, optional): ISO15693 request option flag.
+                Defaults to False.
 
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
         """
         await self._send_command("ATI+LAFI", 1 if option_flag else 0)
 
     async def write_tag_dsfid(self, dsfid: str, option_flag: bool = False) -> None:
-        """Write the "Data Storage Format Identifier" to an ISO15693 transponder.
+        """Write the Data Storage Format Identifier to an ISO15693 transponder.
 
         Args:
-            dsfid (str): dsfid value as hex string
-            option_flag (bool, optional): ISO15693 request option flag. Defaults to False.
+            dsfid (str): DSFID value as hex string.
+            option_flag (bool, optional): ISO15693 request option flag.
+                Defaults to False.
 
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
         """
         if isinstance(dsfid, int):
             dsfid = f"{dsfid:02X}"
@@ -450,14 +492,15 @@ class NfcReaderAT(ReaderAT):
         await self._send_command("AT+WDSFID", dsfid, 1 if option_flag else 0)
 
     async def lock_tag_dsfid(self, option_flag: bool = False) -> None:
-        """Use to permanently lock the "Data Storage Format Identifier" of an ISO15693 transponder
+        """Permanently lock the Data Storage Format Identifier of an ISO15693 transponder.
 
         Args:
-            option_flag (bool, optional): ISO15693 request option flag. Defaults to False.
+            option_flag (bool, optional): ISO15693 request option flag.
+                Defaults to False.
 
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
         """
         await self._send_command("AT+LDSFID", 1 if option_flag else 0)
 
@@ -469,17 +512,17 @@ class NfcReaderAT(ReaderAT):
     ###################################################################################################################
 
     async def send_request_iso14a(self, request: str) -> str:
-        """Send a raw ISO 14A request to a previously selected tag
+        """Send a raw ISO 14A request to a previously selected tag.
 
         Args:
-            request (str): request string
+            request (str): Request string.
 
         Returns:
-            str: the tag response
+            str: The tag response.
 
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
         """
         responses = await self._send_command("AT+REQ14", request)
         # +REQ14: 0004040201000F03
@@ -492,17 +535,18 @@ class NfcReaderAT(ReaderAT):
 
     async def authenticate_mifare_classic_block(self, block: int, key: str | int = "", key_type: str = "") -> None:
         """Authenticate command for Mifare classic cards to access memory blocks.
+
         Prior to this command, the card has to be selected.
 
         Args:
-            block (int): Block to authenticate
-            key (str): Mifare Key to authenticate with (6 bytes as Hex)
-            key_type (str): Type of key. Either key 'A' or key 'B'
-            stored_key (int): Use a stored key instead of key and key type [0..16]
+            block (int): Block to authenticate.
+            key (str): Mifare Key to authenticate with (6 bytes as Hex).
+            key_type (str): Type of key. Either key 'A' or key 'B'.
+            stored_key (int): Use a stored key instead of key and key type [0..16].
 
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
         """
         if isinstance(key, int) or (isinstance(key, str) and key.isdigit()) and 0 <= int(key) <= 16:
             await self._send_command("AT+AUTN", block, key)
@@ -513,27 +557,30 @@ class NfcReaderAT(ReaderAT):
         """Store an authenticate key in the reader.
 
         Args:
-            key_store (int): the key store [0..16]
-            key (str): Mifare Key to authenticate with (6 bytes as Hex)
-            key_type (str): Type of key. Either key 'A' or key 'B'
+            key_store (int): The key store [0..16].
+            key (str): Mifare Key to authenticate with (6 bytes as Hex).
+            key_type (str): Type of key. Either key 'A' or key 'B'.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
         """
         await self._send_command("AT+SIK", key_store, key.upper(), key_type.upper())
 
     async def get_mifare_classic_access_bits(self, block: int) -> str:
-        """Get the access bits for a given Mifare Classic block. Prior to this command, the card has to be selected
+        """Get the access bits for a given Mifare Classic block.
+
+        Prior to this command, the card has to be selected
         and the block has to be authenticated.
 
         Args:
-            block (int): Block to read access bits for
+            block (int): Block number to read access bits of.
 
-        Returns
-            access_bits: access bits as string, like "001"
+        Returns:
+            access_bits: Access bits as string, like "001".
+
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
         """
         responses = await self._send_command("AT+GAB", block)
         access_bits = ""
@@ -545,18 +592,20 @@ class NfcReaderAT(ReaderAT):
     async def set_mifare_classic_keys(self, block: int, key_A: str, key_B: str,
                                       access_bits: Optional[str] = None) -> None:
         # disable 'snake_case naming style' warning - pylint: disable=C0103
-        """Set the keys and optional also the access bits for a given block. Prior to this command,
-        the card has to be selected and the block has to be authenticated
+        """Set the keys and optionally the access bits for a given block.
+
+        Prior to this command, the card has to be selected
+        and the block has to be authenticated.
 
         Args:
-            block (int): Block to set keys and access bits for
-            key_A (str): Mifare KeyA
-            key_B (str): Mifare KeyB
-            access_bits (str): The Mifare access bits for the block
+            block (int): Block to set keys and access bits for.
+            key_A (str): Mifare KeyA.
+            key_B (str): Mifare KeyB.
+            access_bits (str): The Mifare access bits for the block.
 
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
         """
         if access_bits:
             await self._send_command("AT+SKA", block, key_A, key_B, access_bits)
@@ -564,91 +613,106 @@ class NfcReaderAT(ReaderAT):
             await self._send_command("AT+SKO", block, key_A, key_B)
 
     async def write_mifare_classic_value_block(self, block: int, initial_value: int, backup_address: int) -> None:
-        """Write/Create a mifare classic value block. Prior to this command,
-        the card has to be selected and the block has to be authenticated
+        """Write/Create a mifare classic value block.
+
+        Prior to this command, the card has to be selected
+        and the block has to be authenticated.
 
         Args:
-            block (int): block number
-            initial_value (int): initial value
-            backup_address (int): address of the block used for backup
+            block (int): Block number.
+            initial_value (int): Initial value.
+            backup_address (int): Address of the block used for backup.
 
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
         """
         await self._send_command("AT+WVL", block, initial_value, backup_address)
 
     async def read_mifare_classic_value_block(self, block: int) -> tuple[int, int]:
-        """Read a mifare classic value block. Prior to this command,
-        the card has to be selected and the block has to be authenticated
+        """Read a mifare classic value block.
+
+        Prior to this command, the card has to be selected
+        and the block has to be authenticated.
 
         Args:
-            block (int): block number
+            block (int): Block number.
 
         Returns:
-            tuple[int, int]: the value and the address
+            tuple[int, int]: The value and the address.
 
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
         """
         # +RVL: 32,5
         values = (await self._send_command("AT+RVL", block))[0][6:].split(',')
         return int(values[0]), int(values[1])
 
     async def increment_mifare_classic_value(self, block: int, value: int) -> None:
-        """Increment the value of a Mifare Classic block. Prior to this command,
-        the card has to be selected and the block has to be authenticated
+        """Increment the value of a Mifare Classic block.
+
+        Prior to this command, the card has to be selected and
+        the block has to be authenticated.
 
         Args:
-            block (int): block number
-            value (int): increment value
+            block (int): Block number.
+            value (int): Increment value.
 
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
         """
         await self._send_command("AT+IVL", block, value)
 
     async def decrement_mifare_classic_value(self, block: int, value: int) -> None:
-        """Decrement the value of a Mifare Classic block. Prior to this command,
-        the card has to be selected and the block has to be authenticated
+        """Decrement the value of a Mifare Classic block.
+
+        Prior to this command, the card has to be selected
+        and the block has to be authenticated.
 
         Args:
-            block (int): block number
-            value (int): decrement value
+            block (int): Block number.
+            value (int): Decrement value.
 
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
         """
         await self._send_command("AT+DVL", block, value)
 
     async def restore_mifare_classic_value(self, block: int) -> None:
-        """Restore the value of a Mifare Classic block. This will load the current value from the block.
+        """Restore the value of a Mifare Classic block.
+
+        This will load the current value from the block.
         With the transfer method this value can be stored in a other block.
-        Note that this operation only will have an effect after the transfer command is executed.
-        Prior to this command, the card has to be selected and the block has to be authenticated
+        Note that this operation only will have an effect after the
+        transfer command is executed.
+
+        Prior to this command, the card has to be selected
+        and the block has to be authenticated.
 
         Args:
-            block (int): block number
+            block (int): Block number.
 
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
         """
         await self._send_command("AT+RSVL", block)
 
     async def transfer_mifare_classic_value(self, block: int) -> None:
-        """Write all pending transactions to a mifare classic block. Prior to this command,
-        the card has to be selected and the block has to be authenticated
+        """Write all pending transactions to a mifare classic block.
+
+        Prior to this command, the card has to be selected
+        and the block has to be authenticated.
 
         Args:
-            block (int): block number
+            block (int): Block number.
 
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
         """
         await self._send_command("AT+TXF", block)
 
@@ -658,20 +722,23 @@ class NfcReaderAT(ReaderAT):
     # AT+NPAUTH
     # AT+NPWD
     async def authenticate_ntag(self, password: str, password_acknowledge: str = ""):
-        """Authenticate command for NTAG / Mifare Ultralight cards. Prior to this command, the card has to be selected.
+        """Authenticate command for NTAG / Mifare Ultralight cards.
+
+        Prior to this command, the card has to be selected.
         After the authentication password protected pages can be accessed.
-        Checks the password confirmation if it has been specified
+        Checks the password confirmation if it has been specified.
 
         Args:
-            password (str): password 4Byte (hex)
-            password_acknowledge (str): password acknowledge (hex)
-
-        Returns:
-            password_acknowledge (str): The password acknowledge.
+            password (str): Password (hex).
+            password_acknowledge (str): Password acknowledge (hex).
 
         Raises:
-            RfidTransponderException: if the acknowledge is not correct or the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the acknowledge is not correct
+                or the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
+
+        Returns:
+            str: The password acknowledge.
         """
         # +NPAUTH: ABCD
         acknowledge = (await self._send_command("AT+NPAUTH", password))[0][9:]
@@ -681,44 +748,48 @@ class NfcReaderAT(ReaderAT):
 
     async def set_authenticate_ntag(self, password: str, password_acknowledge: str = ""):
         """Set the password and the password acknowledge for NTAG / Mifare Ultralight cards.
+
         Prior to this command, the card has to be selected.
 
         Args:
-            password (str): password (hex)
-            password_acknowledge (str): password acknowledge (hex)
+            password (str): Password (hex).
+            password_acknowledge (str): Password acknowledge (hex).
 
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
         """
         await self._send_command("AT+NPWD", password, password_acknowledge)
 
     # AT+NACFG
     async def write_ntag_access_config(self, page_address: int, read_protect: bool, attempts: int) -> None:
-        """Configure the NTAG access configuration. Prior to this command,
-        the card has to be selected and authenticated
+        """Configure the NTAG access configuration.
+
+        Prior to this command, the card has to be selected and authenticated.
 
         Args:
-            page_address (int): Page address from which password authentication is required
-            read_protect (bool): protect also reading
-            attempts (int): Number of authentication attempts
+            page_address (int): Page address from which password
+                authentication is required.
+            read_protect (bool): Also protect reading.
+            attempts (int): Number of authentication attempts.
 
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
         """
         await self._send_command("AT+NACFG", page_address, 1 if read_protect else 0, attempts)
 
     async def read_ntag_access_config(self) -> tuple[int, bool, int]:
-        """Read the NTAG access configuration. Prior to this command,
-        the card has to be selected and authenticated
+        """Read the NTAG access configuration.
 
-        Returns:
-            tuple[int, bool, int]: page_address, read_protect, attempts
+        Prior to this command, the card has to be selected and authenticated.
 
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
+
+        Returns:
+            tuple[int, bool, int]: (page_address, read_protect, attempts).
         """
         # +NACFG: 4,1,0
         values = (await self._send_command("AT+NACFG?"))[0][8:].split(',')
@@ -726,30 +797,34 @@ class NfcReaderAT(ReaderAT):
 
     # AT+NMCFG
     async def write_ntag_mirror_config(self, mirror_mode: NTagMirrorMode, mirror_page: int, mirror_byte: int) -> None:
-        """Configure the NTAG mirror configuration. Prior to this command,
-        the card has to be selected and authenticated
+        """Configure the NTAG mirror configuration.
+
+        Prior to this command, the card has to be selected and authenticated.
 
         Args:
-            mirror_mode (NTagMirrorMode): Mirror mode
-            mirror_page (int): The start page where the configured data is mirrored to. Range: 4 - (Last Page - 3)
-            mirror_byte (int): Offset of the mirrored data in the Mirror Page. [0..3]
+            mirror_mode (NTagMirrorMode): Mirror mode.
+            mirror_page (int): The start page where the configured data
+                is mirrored to. Range: 4 - (Last Page - 3).
+            mirror_byte (int): Offset of the mirrored data in the
+                Mirror Page [0..3].
 
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
         """
         await self._send_command("AT+NMCFG", mirror_mode.name, mirror_page, mirror_byte)
 
     async def read_ntag_mirror_config(self) -> tuple[NTagMirrorMode, int, int]:
-        """Read the NTAG mirror configuration. Prior to this command,
-        the card has to be selected and authenticated
+        """Read the NTAG mirror configuration.
+
+        Prior to this command, the card has to be selected and authenticated.
 
         Returns:
-            tuple[int, bool, int]: mirror_mode, mirror_page, mirror_byte
+            tuple[int, bool, int]: (mirror_mode, mirror_page, mirror_byte).
 
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
         """
         # +NMCFG: BOTH,4,0
         values = (await self._send_command("AT+NMCFG?"))[0][8:].split(',')
@@ -757,29 +832,32 @@ class NfcReaderAT(ReaderAT):
 
     # AT+NCCFG
     async def write_ntag_counter_config(self, enable_counter: bool, enable_password: bool) -> None:
-        """Configure the NTAG counter configuration. Prior to this command,
-        the card has to be selected and authenticated
+        """Configure the NTAG counter configuration.
+
+        Prior to this command, the card has to be selected and authenticated.
 
         Args:
             enable_counter (bool): Set to True to enable the NFC counter.
-            enable_password (bool): Set to True to enable password protection for the NFC counter.
+            enable_password (bool): Set to True to enable password
+                protection for the NFC counter.
 
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
         """
         await self._send_command("AT+NCCFG", 1 if enable_counter else 0, 1 if enable_password else 0)
 
     async def read_ntag_counter_config(self) -> tuple[bool, bool]:
-        """Read the NTAG counter configuration. Prior to this command,
-        the card has to be selected and authenticated
+        """Read the NTAG counter configuration.
+
+        Prior to this command, the card has to be selected and authenticated.
 
         Returns:
-            tuple[bool, bool]: counter_enabled, password_enabled
+            tuple[bool, bool]: (counter_enabled, password_enabled).
 
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
         """
         # +NCCFG: 1,0
         values = (await self._send_command("AT+NCCFG?"))[0][8:].split(',')
@@ -787,28 +865,30 @@ class NfcReaderAT(ReaderAT):
 
     # AT+NDCFG
     async def write_ntag_modulation_config(self, use_strong_modulation: bool) -> None:
-        """Configure the NTAG modulation configuration. Prior to this command,
-        the card has to be selected and authenticated
+        """Configure the NTAG modulation configuration.
+
+        Prior to this command, the card has to be selected and authenticated.
 
         Args:
             use_strong_modulation (bool): Set to True to use strong modulation.
 
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
         """
         await self._send_command("AT+NDCFG", 1 if use_strong_modulation else 0)
 
     async def read_ntag_modulation_config(self) -> bool:
-        """Read the NTAG modulation configuration. Prior to this command,
-        the card has to be selected and authenticated
+        """Read the NTAG modulation configuration.
+
+        Prior to this command, the card has to be selected and authenticated.
 
         Returns:
-            strong_modulation_enabled (bool): strong modulation is enabled
+            strong_modulation_enabled (bool): Whether strong modulation is enabled.
 
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
         """
         # +NDCFG: 1
         value: str = (await self._send_command("AT+NDCFG?"))[0][8:]
@@ -816,25 +896,27 @@ class NfcReaderAT(ReaderAT):
 
     # AT+NCLK
     async def lock_ntag_config(self) -> None:
-        """Permanently lock the NTAG configuration. Prior to this command,
-        the card has to be selected and authenticated
+        """Permanently lock the NTAG configuration.
+
+        Prior to this command, the card has to be selected and authenticated.
 
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
         """
         await self._send_command("AT+NCLK")
 
     async def is_ntag_config_locked(self) -> bool:
-        """Check if the NTAG configuration is locked. Prior to this command,
-        the card has to be selected and authenticated
+        """Check if the NTAG configuration is locked.
+
+        Prior to this command, the card has to be selected and authenticated.
 
         Returns:
-            locked (bool): True if the configuration is locked
+            locked (bool): True if the configuration is locked.
 
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
         """
         # +NCLK: 1
         value: str = (await self._send_command("AT+NCLK?"))[0][7:]
@@ -842,14 +924,16 @@ class NfcReaderAT(ReaderAT):
 
     # AT+NCNT
     async def read_ntag_counter(self) -> int:
-        """Read the NTAG counter. Prior to this command, the card has to be selected and authenticated
+        """Read the NTAG counter.
+
+        Prior to this command, the card has to be selected and authenticated.
 
         Returns:
-            value (int): The counter value
+            value (int): The counter value.
 
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
         """
         # +NCNT: 12
         value: str = (await self._send_command("AT+NCNT?"))[0][7:]
@@ -857,33 +941,40 @@ class NfcReaderAT(ReaderAT):
 
     #  AT+NLK
     async def lock_ntag_page(self, page: int) -> None:
-        """Lock a NTAG page. The lock is irreversible. Prior to this command, the card has to be selected
-        and authenticated
+        """Lock a NTAG page.
+
+        The lock is irreversible.
+        Prior to this command, the card has to be selected and authenticated.
 
         Args:
-            page (int): the page to lock [3..15]
+            page (int): The page to lock [3..15].
+
         Returns:
-            value (int): The counter value
+            value (int): The counter value.
 
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
         """
         await self._send_command("AT+NLK", page)
 
     # AT+NBLK
     async def lock_ntag_block_lock(self, page_number: int) -> None:
-        """Set the NTAG block-lock-bits. The block-lock bits are used to lock the lock bits.
-        Refer to the NTAG data sheet for details. Prior to this command, the card has to be selected and authenticated
+        """Set the NTAG block-lock-bits.
+
+        The block-lock bits are used to lock the lock bits.
+        Refer to the NTAG data sheet for details.
+        Prior to this command, the card has to be selected and authenticated.
 
         Args:
-            page_number (int): the page number to lock the lock bits for.
+            page_number (int): The page number to lock the lock bits for.
+
         Returns:
-            value (int): The counter value
+            value (int): The counter value.
 
         Raises:
-            RfidTransponderException: if the transponder return an error
-            RfidReaderException: if an reader error occurs
+            RfidTransponderException: If the transponder returns an error.
+            RfidReaderException: If a reader error occurs.
         """
         await self._send_command("AT+NBLK", page_number)
 
@@ -962,57 +1053,27 @@ class NfcReaderAT(ReaderAT):
     # ADDITIONAL DEVICE FEATURES                                                                                      #
     ###################################################################################################################
 
-    async def enable_start_up_sound(self):
-        """Enable the start up sound.
-
-        Raises:
-            RfidReaderException: if an reader error occurs
-        """
-        await self._send_command("AT+SUS", 1)
-
-    async def disable_start_up_sound(self):
-        """Enable the start up sound.
-
-        Raises:
-            RfidReaderException: if an reader error occurs
-        """
-        await self._send_command("AT+SUS", 0)
-
-    async def play_feedback(self, sequence_nr: int):
-        """Play a preconfigured sequence.
-
-        Args:
-            sequence_nr (int): Sequence number to play
-
-        Raises:
-            RfidReaderException: if an reader error occurs
-        """
-        await self._send_command("AT+FDB", sequence_nr)
-
-    async def play_notes(self, notes: str, repetitions: int, step_length: int):
-        """Play a sequence of notes. The current maximum sequence length is 64.
-
-        Args:
-            notes (str): Encoded notes to be played. A note is always encoded by its name written as a capital letter
-            and octave e.g. C4 or D5. Half-tone steps are encoded by adding a s or b to the note. For example Ds4 or
-            Eb4. Note that Ds4 and Eb4 are basically the same note. A pause is denoted by a lowercase x.
-            repetitions (int): Number of times the sequence should be repeated
-            step_length (int): Step length of a single step in the sequence
-
-        Raises:
-            RfidReaderException: if an reader error occurs
-        """
-        await self._send_command("AT+PLY", notes, repetitions, step_length)
-
     # @override
     def set_cb_inventory(self, callback: Optional[Callable[[List[HfTag]], None]]
                          ) -> Optional[Callable[[List[HfTag]], None]]:
-        """
-        Set the callback for a new inventory. The callback has the following arguments:
-        * tags (List[HfTag]) - the tags
+        """Set the callback for a new inventory.
+
+        Define a callback which will be triggered whenever a new inventory
+        result is available. The callback has the following arguments:
+
+        * tags (List[HfTag]) - List of transponders found in the inventory.
+
+        Args:
+            callback (Callable): Reference to the callback function to use.
 
         Returns:
-            Optional[Callable[[List[HfTag]]]: the old callback
+            Optional[Callable]: The old callback.
+
+        Example:
+            >>> def my_callback(tags)
+            >>>     for tag in tags:
+            >>>         print(tag.get_epc())
+            >>> set_cb_inventory(my_callback)
         """
         return super().set_cb_inventory(callback)
 
@@ -1090,6 +1151,7 @@ class NfcReaderAT(ReaderAT):
                 continue
             info: List[str] = response[split_index:].split(',')
             try:
+                new_tag = None
                 if not tag_details_enabled:
                     tag_type = self._mode
                     if tag_type == Mode.AUTO:
@@ -1106,7 +1168,8 @@ class NfcReaderAT(ReaderAT):
                         new_tag = ISO15Tag(info[0], timestamp, dsfid=info[1])
                     elif tag_type == Mode.ISO14A:
                         new_tag = ISO14ATag(info[0], timestamp, sak=info[1], atqa=info[2])
-                inventory.append(new_tag)
+                if new_tag is not None:  # null check
+                    inventory.append(new_tag)
             except IndexError as err:
                 self.get_logger().debug("Error parsing inventory transponder -%s", err)
         if error:

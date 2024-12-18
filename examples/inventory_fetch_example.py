@@ -1,51 +1,53 @@
 """
-This is a sample file for using the fetch_inventory method after an inventory scan is started.
+This is a sample file for fetching results of a continuous inventory scan.
 
-The program uses a deskid iso reader on the port COM1
+The program uses the get_reader() example utility to init a new reader
+object from commandline arguments.
 
-After connecting, the continuous inventory is started and the print the currently scanned transponders every 2 seconds.
+After connecting, a continuous inventory is started which will run for a
+few seconds. A background task will collect all the results which are
+fetched and printed in regular intervals.
 """
 
 import asyncio
-import os
-import sys
 import time
 
-sys.path.append(os.getcwd())
-# disable 'wrong-import-position' warning - pylint: disable=C0413
-from metratec_rfid import DeskIdIso  # noqa -- flake ignore  pylint: disable=import-error
-from metratec_rfid import RfidReaderException  # noqa -- flake ignore  pylint: disable=import-error
+from example_utils import get_reader
+from metratec_rfid import RfidReaderException
 
 
 async def main():
+    """Run the inventory fetch example.
+    """
+    # Create a reader instance from commandline arguments.
+    reader = get_reader()
+    # Set a callback for reader status changes.
+    reader.set_cb_status(lambda status: print(f"Status changed: {status}"))
 
-    # Create an instance and define the serial connection
-    reader = DeskIdIso(instance="Reader", serial_port="/dev/ttyUSB0")
-    # set a callback for the reader status
-    reader.set_cb_status(lambda status: print(f"status changed: {status}"))
-
-    # connect the reader
     try:
+        # Connect the reader.
         await reader.connect()
-        # start the inventory
+        # Start a continuous inventory.
+        # The results will be stored by another task.
         await reader.start_inventory()
-        end_time = time.time() + 60.0
+        # Let the inventory run for 10 seconds and query results every 2s.
+        end_time = time.time() + 10.0
         while end_time > time.time():
+            # Let the main task wait while continuous inventory is running.
             await asyncio.sleep(2.0)
+            # Fetch and print new inventory data.
             inv = await reader.fetch_inventory()
-            print(f"Read Tags: {inv}")
+            print(f"New inventory: {inv}")
+        # Stop the continuous inventory operation.
         await reader.stop_inventory()
-
     except RfidReaderException as err:
         print(f"Reader exception: {err}")
     finally:
+        # Disconnect the reader for clean shutdown.
         try:
             await reader.disconnect()
         except RfidReaderException as err:
-            print(f"Error disconnect: {err}")
-
-    # Program finished
+            print(f"Disconnect error: {err}")
 
 if __name__ == '__main__':
-    loop = asyncio.new_event_loop()
-    loop.run_until_complete(main())
+    asyncio.run(main())

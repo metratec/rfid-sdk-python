@@ -18,11 +18,11 @@ class UhfTagTestCase(unittest.TestCase):
         """
         tag = UhfTag("")
         self.assertIsNotNone(tag.get_epc())
-        self.assertIsNone(tag.get_timestamp())
-        self.assertIsNone(tag.get_tid())
-        self.assertIsNone(tag.get_antenna())
+        self.assertEqual(0, tag.get_timestamp())
+        self.assertEqual("", tag.get_tid())
+        self.assertEqual(-1, tag.get_antenna())
         self.assertEqual(1, tag.get_seen_count())
-        self.assertIsNone(tag.get_rssi())
+        self.assertEqual(0, tag.get_rssi())
 
     def test_init(self) -> None:
         """Tests the constructor

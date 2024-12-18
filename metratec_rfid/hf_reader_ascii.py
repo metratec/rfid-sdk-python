@@ -23,39 +23,56 @@ class HfReaderAscii(ReaderAscii):
     # @override
     def set_cb_inventory(self, callback: Optional[Callable[[List[HfTag]], None]]
                          ) -> Optional[Callable[[List[HfTag]], None]]:
-        """
-        Set the callback for a new inventory. The callback has the following arguments:
-        * tags (List[HfTag]) - the tags
+        """Set the callback for a new inventory.
+
+        Define a callback which will be triggered whenever a new inventory
+        result is available. The callback has the following arguments:
+
+        * tags (List[HfTag]) - List of transponders found in the inventory.
+
+        Args:
+            callback (Callable): Reference to the callback function to use.
 
         Returns:
-            Optional[Callable]: the old callback
+            Optional[Callable]: The old callback.
+
+        Example:
+            >>> def my_callback(tags)
+            >>>     for tag in tags:
+            >>>         print(tag.get_epc())
+            >>> set_cb_inventory(my_callback)
         """
         return super().set_cb_inventory(callback)
 
     def set_cb_request(self, callback: Optional[Callable[[HfTag], None]]
                        ) -> Optional[Callable[[HfTag], None]]:
-        """
-        Set the callback for a new inventory. The callback has the following arguments:
-        * tags (List[HfTag]) - the tags
+        """Set the callback for a new request result.
+
+        Define a callback which will be triggered whenever a new request
+        result (for example `read_tag_data()`) is available.
+        The callback has the following arguments:
+
+        * tags (List[HfTag]) - List of transponders found.
 
         Returns:
-            Optional[Callable]: the old callback
+            Optional[Callable]: The old callback.
         """
         old = self._cb_request
         self._cb_request = callback
         return old
 
     async def enable_rf_interface(self, is_single_sub_carrier: bool = True, modulation_depth: int = 100) -> None:
-        """enable the reader rf interface
+        """Enable the readers RF interface.
 
         Args:
-            is_single_sub_carrier (bool): if True, the single sub carrier otherwise the double sub carrier mode is used.
-            Default is True
+            is_single_sub_carrier (bool): If True, the single sub carrier
+                mode is used (default).
+                Otherwise it will be the double sub carrier mode.
 
-            modulation_depth: modulation depth, 10% or 100%. Default is 100
+            modulation_depth: Modulation depth, 10% or 100%. Default is 100%.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
         """
         if modulation_depth not in (10, 100):
             raise RfidReaderException("Modulation depth must be 100 or 10")
@@ -65,39 +82,44 @@ class HfReaderAscii(ReaderAscii):
         self._rfi_enabled = True
 
     async def disable_rf_interface(self) -> None:
-        """disable the reader rf interface
+        """Disable the readers RF interface.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
         """
         await self._set_command("SRI", "OFF")
         self._rfi_enabled = False
 
     async def set_mode(self, mode: str = "156"):
-        """Sets the reader mode
+        """Set the reader mode.
 
         Args:
-            mode (str): the ISO anti-collision and transmission protocol to be used for tag communication.
-                        Available: "156", "14A", "14B". Defaults to "156"
+            mode (str): The ISO anti-collision and transmission protocol
+                to be used for tag communication.
+                Available are "156", "14A" and "14B". Defaults to "156".
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
         """
         await self._set_command("MOD", mode)
 
     async def set_power(self, power: int):
-        """
-        The reader allows different output power levels to match antenna size, tag size or tag position.
-        The power level is given in milliwatt (mW). The minimum value is 500, the maximum is 4000 with steps of 250.
+        """Set the output power level of the reader.
 
-        The second generation ISO 15693 devices with hardware revision >= 02.00 (DeskID ISO, UM15,
-        Dwarf15, QR15 and QuasarMX) allow setting power values of 100 or 200 (mW).
+        The reader allows different output power levels to match antenna
+        size, tag size or tag position.
+        The power level is given in milliwatt (mW). The minimum value
+        is 500, the maximum is 4000 with steps of 250.
+
+        The second generation ISO 15693 devices with hardware
+        revision >= 02.00 (DeskID ISO, UM15, Dwarf15, QR15 and QuasarMX)
+        allow setting power values of 100 or 200 (mW).
 
         Args:
-            power (str): power in mW
+            power (str): Power value in mW.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
         """
         try:
             await self._set_command("SET", "PWR", power)
@@ -110,22 +132,26 @@ class HfReaderAscii(ReaderAscii):
     # @override
     async def get_inventory(self, single_slot: bool = False, only_new_tags: bool = False,
                             afi: Optional[int] = None) -> List[HfTag]:
-        """get the current inventory from the current antenna (see set_antenna)
+        """Get an inventory from the current antenna.
 
         Args:
-            single_slot (bool): If activated the reader only searches for one transponder. this is faster.
-            If more than one transponder is found, an error is thrown. Defaults to False.
+            single_slot (bool): If enabled, the reader only searches for
+                one transponder, which is faster.
+                If more than one transponder is found, an error is raised.
+                Defaults to False.
 
-            only_new_tags (bool): the reader finds each transponder only once as long as the transponder is
-            powered within the RF field of the reader. Defaults to False.
+            only_new_tags (bool): The reader finds each transponder only
+                once as long as the transponder is powered within the RF
+                field of the reader. Defaults to False.
 
-            afi (int): Set the application family identifier . Transponder with other api will not answer.
+            afi (int): Set the Application Family Identifier. Transponders
+                with other AFI will not answer.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
 
         Returns:
-            List[Tag]: An array with the transponder found
+            List[Tag]: An array with the transponders found.
         """
         if self._config['antenna_mode'][0] != "S":
             # Not in single antenna mode ... switch mode
@@ -138,24 +164,28 @@ class HfReaderAscii(ReaderAscii):
     # @override
     async def get_inventory_multi(self, ignore_error: bool = False, single_slot: bool = False,
                                   only_new_tags: bool = False, afi: Optional[int] = None) -> List[HfTag]:
-        """get the current inventory. Multiple antennas are used (see set_antenna_multiplex)
+        """Get an inventory from multiple antennas.
+
+        Antenna ports are chosen according to `set_antenna_multiplex()`.
 
         Args:
-            ignore_error (bool, optional): Set to True to ignore antenna errors. Defaults to False.
+            ignore_error (bool, optional): Set to True to ignore antenna errors.
+                Defaults to False.
 
-            single_slot (bool): If activated the reader only searches for one transponder. this is faster.
-            If more than one transponder is found, an error is thrown. Defaults to False.
+            single_slot (bool): If enabled, the reader only searches for
+                one transponder, which is faster.
+                If more than one transponder is found, an error is raised.
+                Defaults to False.
 
-            only_new_tags (bool): the reader finds each transponder only once as long as the transponder is
-            powered within the RF field of the reader. Defaults to False.
-
-            afi (int): Set the application family identifier . Transponder with other api will not answer.
+            only_new_tags (bool): The reader finds each transponder only
+                once as long as the transponder is powered within the RF
+                field of the reader. Defaults to False.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
 
         Returns:
-            List[Tag]: An array with the transponder found
+            List[HfTag]: An array with the transponders found.
         """
         if self._config['antenna_mode'][0] != "M":
             # Not in multiplex antenna mode ... switch mode
@@ -170,19 +200,26 @@ class HfReaderAscii(ReaderAscii):
 
     async def start_inventory(self, single_slot: bool = False, only_new_tags: bool = False,
                               afi: Optional[int] = None) -> None:
-        """Starts the continuos inventory. Multiple antennas are used (see set_antenna_multiplex)
+        """Start a continuous inventory.
+
+        This will cause the reader to perform inventories continuously
+        until the `stop_inventory()` function is called.
 
         Args:
-            single_slot (bool): If activated the reader only searches for one transponder. this is faster.
-            If more than one transponder is found, an error is thrown. Defaults to False.
+            single_slot (bool): If enabled, the reader only searches for
+                one transponder, which is faster.
+                If more than one transponder is found, an error is raised.
+                Defaults to False.
 
-            only_new_tags (bool): the reader finds each transponder only once as long as the transponder is
-            powered within the RF field of the reader. Defaults to False.
+            only_new_tags (bool): The reader finds each transponder only
+                once as long as the transponder is powered within the RF
+                field of the reader. Defaults to False.
 
-            afi (int): Set the application family identifier . Transponder with other api will not answer.
+            afi (int): Set the Application Family Identifier. Transponders
+                with other AFI will not answer.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
         """
         # Method from ReaderGen1 overridden
         if self._config['antenna_mode'][0] != "S":
@@ -193,21 +230,30 @@ class HfReaderAscii(ReaderAscii):
 
     async def start_inventory_multi(self, ignore_error: bool = False, single_slot: bool = False,
                                     only_new_tags: bool = False, afi: Optional[int] = None) -> None:
-        """Starts the continuos inventory. Multiple antennas are used (see set_antenna_multiplex)
+        """Start a continuous inventory on multiple antennas.
+
+        This will cause the reader to perform inventories continuously
+        until the `stop_inventory_multi()` function is called.
+        Antenna ports are chosen according to `set_antenna_multiplex()`.
 
         Args:
-            ignore_error (bool, optional): Set to True to ignore antenna errors. Defaults to False.
+            ignore_error (bool, optional): Set to True to ignore antenna
+                errors. Defaults to False.
 
-            single_slot (bool): If activated the reader only searches for one transponder. this is faster.
-            If more than one transponder is found, an error is thrown. Defaults to False.
+            single_slot (bool): If enabled, the reader only searches for
+                one transponder, which is faster.
+                If more than one transponder is found, an error is raised.
+                Defaults to False.
 
-            only_new_tags (bool): the reader finds each transponder only once as long as the transponder is
-            powered within the RF field of the reader. Defaults to False.
+            only_new_tags (bool): The reader finds each transponder only
+                once as long as the transponder is powered within the RF
+                field of the reader. Defaults to False.
 
-            afi (int): Set the application family identifier . Transponder with other api will not answer.
+            afi (int): Set the Application Family Identifier. Transponders
+                with other AFI will not answer.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
         """
         # Method from ReaderGen1 overridden
         if self._config['antenna_mode'][0] != "M":
@@ -218,45 +264,41 @@ class HfReaderAscii(ReaderAscii):
 
     async def read_tag_data(self, block_number: int, tag_id: Optional[str] = None,
                             option_flag: bool = False) -> HfTag:
-        """read the memory of the transponder
+        """Read the memory of a transponder.
 
         Args:
-            block_number (int): block to read
+            block_number (int): Block number to read.
 
-            tag_id (str, optional): transponder to be read, if not set, the currently available transponder is read
+            tag_id (str, optional): Transponder to be read, defined by its
+                tag ID. If not set, the currently available transponder is read.
 
-            option_flag (bool, optional): Meaning is defined by the tag command description.
+            option_flag (bool, optional): Meaning is defined by the tag
+                command description.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
 
         Returns:
-            Dict['data', str]: The transponder data
-
-            Dict['error', str: The transponder error if data is empty
-
-            Dict['timestamp', float]: the timestamp
+            HfTag: The transponder that was read.
         """
         return await self._send_request("REQ", "20", f"{block_number:02X}", tag_id, option_flag)
 
     async def read_tag_information(self, tag_id: Optional[str] = None,
                                    option_flag: bool = False) -> HfTagInfo:
-        """read the transponder information
+        """Read the transponder information.
 
         Args:
-            tag_id (str, optional): transponder to be read, if not set, the currently available transponder is read
+            tag_id (str, optional): Transponder to be read, defined by its
+                tag ID. If not set, the currently available transponder is read.
 
-            option_flag (bool, optional): Meaning is defined by the tag command description.
+            option_flag (bool, optional): Meaning is defined by the tag
+                command description.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
 
         Returns:
-            Dict['data', str]: The transponder data
-
-            Dict['error', str: The transponder error if data is empty
-
-            Dict['timestamp', float]: the timestamp
+            HfTagInfo: The transponder info that was read.
         """
         response = await self._send_request("REQ", "2B", None, tag_id, option_flag)
 
@@ -265,112 +307,101 @@ class HfReaderAscii(ReaderAscii):
 
     async def write_tag_data(self, block_number: int, data: str, tag_id: Optional[str] = None,
                              option_flag: bool = False) -> HfTag:
-        """write the usr memory of the found transponder
+        """Write the USR memory of a transponder.
 
         Args:
-            block_number (int): block to write
+            block_number (int): Block number to write.
 
-            data (str): data to write
+            data (str): Data to write.
 
-            tag_id (str, optional): transponder to be write, if not set, the currently available transponder is write
+            tag_id (str, optional): Transponder to write, defined by its
+                tag ID. If not set, the currently available transponder is written.
 
-            option_flag (bool, optional): Meaning is defined by the tag command description.
+            option_flag (bool, optional): Meaning is defined by the tag
+                command description.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
 
         Returns:
-            Dict['data', str]: The read transponders
-
-            Dict['error', str]: the error message if data
-
-            Dict['timestamp', float]: the timestamp
+            HfTag: The transponder that was written.
         """
         return await self._send_request("WRQ", "21", f"{block_number:02X}{data}", tag_id, option_flag)
 
     async def write_tag_afi(self, afi: int, tag_id: Optional[str] = None,
                             option_flag: bool = False) -> HfTag:
-        """write the transponder application family identifier value
+        """Write the Application Family Identifier value of a transponder.
 
         Args:
-            afi (int): the application family identifier to set
+            afi (int): The Application Family Identifier to set.
 
-            tag_id (str, optional): transponder to be write, if not set, the currently available transponder is write
+            tag_id (str, optional): Transponder to write, defined by its
+                tag ID. If not set, the currently available transponder is written.
 
-            option_flag (bool, optional): Meaning is defined by the tag command description.
+            option_flag (bool, optional): Meaning is defined by the tag
+                command description.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If an reader error occurs.
 
         Returns:
-            Dict['data', str]: The read transponders
-
-            Dict['error', str]: the error message if data
-
-            Dict['timestamp', float]: the timestamp
+            HfTag: The transponder that was written.
         """
         return await self._send_request("WRQ", "27", f"{afi:02X}", tag_id, option_flag)
 
     async def lock_tag_afi(self, tag_id: Optional[str] = None, option_flag: bool = False) -> HfTag:
-        """Lock the transponder application family identifier
+        """Lock the Application Family Identifier of a transponder.
 
         Args:
-            tag_id (str, optional): transponder to be write, if not set, the currently available transponder is write
+            tag_id (str, optional): Transponder to lock, defined by its
+                tag ID. If not set, the currently available transponder is locked.
 
-            option_flag (bool, optional): Meaning is defined by the tag command description.
+            option_flag (bool, optional): Meaning is defined by the tag
+                command description.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
 
         Returns:
-            Dict['data', str]: The read transponders
-
-            Dict['error', str]: the error message if data
-
-            Dict['timestamp', float]: the timestamp
+            HfTag: The transponder that was locked.
         """
         return await self._send_request("WRQ", "28", None, tag_id, option_flag)
 
     async def write_tag_dsfid(self, dsfid: int, tag_id: Optional[str] = None,
                               option_flag: bool = False) -> HfTag:
-        """write the transponder data storage format identifier
+        """Write the Data Storage Format Identifier of a transponder.
 
         Args:
-            dsfid (int): the data storage format identifier to set
+            dsfid (int): The Data Storage Format Identifier to set.
 
-            tag_id (str, optional): transponder to be write, if not set, the currently available transponder is write
+            tag_id (str, optional): Transponder to write, defined by its
+                tag ID. If not set, the currently available transponder is written.
 
             option_flag (bool, optional): Meaning is defined by the tag command description.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
 
         Returns:
-            Dict['data', str]: The read transponders
-
-            Dict['error', str]: the error message if data
-
-            Dict['timestamp', float]: the timestamp
+            HfTag: The transponder that was written.
         """
         return await self._send_request("WRQ", "29", f"{dsfid:02X}", tag_id, option_flag)
 
     async def lock_tag_dsfid(self, tag_id: Optional[str] = None, option_flag: bool = False) -> HfTag:
-        """Lock the transponder data storage format identifier
+        """Lock the Data Storage Format Identifier of a transponder.
 
         Args:
-            tag_id (str, optional): transponder to be write, if not set, the currently available transponder is write
+            tag_id (str, optional): Transponder to lock, defined by its
+                tag ID. If not set, the currently available transponder is locked.
 
-            option_flag (bool, optional): Meaning is defined by the tag command description.
+            option_flag (bool, optional): Meaning is defined by the tag
+                command description.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
 
         Returns:
-            Dict['data', str]: The read transponders
-
-            Dict['error', str]: the error message if data
-
-            Dict['timestamp', float]: the timestamp
+            HfTag: The transponder that was locked.
         """
         return await self._send_request("WRQ", "2A", None, tag_id, option_flag)
 
@@ -378,13 +409,13 @@ class HfReaderAscii(ReaderAscii):
     async def fetch_inventory(self, wait_for_tags: bool = True) -> List[HfTag]:  # type: ignore
         """
         Can be called when an inventory has been started. Waits until at least one tag is found
-        and returns all currently scanned transponders from a continuous scan
+        and returns all currently scanned transponders from a continuous scan.
 
         Args:
-            wait_for_tags (bool): Set to true, to wait until transponders are available
+            wait_for_tags (bool): Set to true, to wait until transponders are available.
 
         Returns:
-            List[HfTag]: a list with the transponder found
+            List[HfTag]: A list with the transponders found.
         """
         return await super().fetch_inventory(wait_for_tags)  # type: ignore
 

@@ -10,10 +10,10 @@ import os
 import sys
 sys.path.append(os.path.abspath('../..'))
 
-project = 'Metratec rfid'
+project = 'Metratec RFID'
 copyright = '2023, Metratec GmbH'
 author = 'www.metratec.com'
-release = '1.2.0'
+release = '1.3.0'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -23,6 +23,7 @@ extensions = [
     'sphinx.ext.duration',
     'sphinx.ext.doctest',
     'sphinx.ext.autodoc',  # generate documentation from doc string
+    'sphinx.ext.napoleon'  # better formatting for Google-style docstring
     # 'sphinx.ext.autosummary',
     #  'sphinx.ext.viewcode'
 ]

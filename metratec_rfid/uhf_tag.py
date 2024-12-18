@@ -27,53 +27,58 @@ class UhfTag(Tag):
             self.set_seen_count(seen_count)
 
     def get_id(self) -> str:
+        """Return the identifier of this tag.
+
+        Returns:
+            str: The EPC value or "unknown" if not available.
+        """
         identifier: Optional[str] = self.get_epc()
         return identifier if identifier else "unknown"
 
     def get_epc(self) -> Optional[str]:
-        """Return the epc
+        """Return the EPC value of this tag.
 
         Returns:
-            str: the epc
+            str: The EPC value.
         """
         return self.get('epc')
 
     def set_epc(self, epc: str) -> None:
-        """Set the epc
+        """Set the EPC value of this tag.
 
         Args:
-            epc (str): the epc to set
+            epc (str): The EPC value to set.
         """
         self.set_value('epc', epc)
 
     def get_rssi(self) -> int:
-        """Return the rssi
+        """Return the RSSI value of the transaction.
 
         Returns:
-            int: the rssi
+            int: The RSSI value in dBm or 0 if not available.
         """
         return self.get('rssi', 0)
 
     def set_rssi(self, rssi: int) -> None:
-        """Set the rssi
+        """Set the RSSI value of this tag.
 
         Args:
-            rssi (int): the rssi to set
+            rssi (int): The RSSI value to set.
         """
         self.set_value('rssi', rssi)
 
     def get_phase(self) -> list[int]:
-        """Return the phase
+        """Return the phase measurement of the singulation.
 
         Returns:
-            list[int]: the phase
+            list[int]: The phase values or [] if not available.
         """
         return self.get('phase', [])
 
     def set_phase(self, phase: list[int]) -> None:
-        """Set the phase1
+        """Set the phase value of this tag.
 
         Args:
-            phase1 (int): the phase1 to set
+            phase (List[int]): The phase value to set.
         """
         self.set_value('phase', phase)

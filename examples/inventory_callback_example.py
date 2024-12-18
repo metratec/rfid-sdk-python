@@ -1,48 +1,59 @@
 """
-This is a sample file for using the inventory callback methods in the library.
+This is a sample file for using the inventory callback method of the library.
 
-The program uses a deskid iso reader on the port COM1
+The program uses the get_reader() example utility to init a new reader
+object from commandline arguments.
 
-After connecting, the continuous inventory is started and the tags found are printed to the console.
+After connecting, a continuous inventory is started which will run for a
+few seconds. Whenever new tag data is available, it is printed to the console.
 """
 
 import asyncio
-import os
-import sys
 
-sys.path.append(os.getcwd())
-# disable 'wrong-import-position' warning - pylint: disable=C0413
-from metratec_rfid import DeskIdIso  # noqa -- flake ignore  pylint: disable=import-error
-from metratec_rfid import RfidReaderException  # noqa -- flake ignore  pylint: disable=import-error
+from example_utils import get_reader
+from metratec_rfid import RfidReaderException
+
+
+def print_tags(tag_list):
+    """
+    Inventories return a list of Tag objects.
+    This function prints each individual tag to the console.
+    """
+    print("New inventory:")
+    for tag in tag_list:
+        print(tag)
 
 
 async def main():
+    """Run the inventory callback example.
+    """
+    # Create a reader instance from commandline arguments.
+    reader = get_reader()
+    # Set a callback for reader status changes.
+    reader.set_cb_status(lambda status: print(f"Status changed: {status}"))
+    # Set a callback for new inventories.
+    reader.set_cb_inventory(print_tags)
 
-    # Create an instance and define the serial connection
-    reader = DeskIdIso(instance="Reader", serial_port="/dev/ttyUSB0")
-    # set a callback for the reader status
-    reader.set_cb_status(lambda status: print(f"status changed: {status}"))
-    # set a callback for the inventories
-    reader.set_cb_inventory(lambda inventory: print(f"new inventory: {inventory}"))
-
-    # connect the reader
     try:
+        # Connect the reader.
         await reader.connect()
-        # start the inventory
+        # Start a continuous inventory. The results will be parsed in
+        # another task and the callback defined with set_cb_inventory()
+        # will be triggered whenever new data is available.
         await reader.start_inventory()
-        await asyncio.sleep(60)
+        # Let the main task wait while continuous inventory is running.
+        await asyncio.sleep(10)
+        # Stop the continuous inventory operation.
         await reader.stop_inventory()
-
     except RfidReaderException as err:
         print(f"Reader exception: {err}")
     finally:
+        # Disconnect the reader for clean shutdown.
         try:
             await reader.disconnect()
         except RfidReaderException as err:
-            print(f"Error disconnect: {err}")
+            print(f"Disconnect error: {err}")
 
-    # Program finished
 
 if __name__ == '__main__':
-    loop = asyncio.new_event_loop()
-    loop.run_until_complete(main())
+    asyncio.run(main())

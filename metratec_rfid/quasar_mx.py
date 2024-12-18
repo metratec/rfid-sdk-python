@@ -1,4 +1,4 @@
-"""metratec Quasar MX
+"""Metratec QuasarMX HF reader
 """
 
 from .reader import ExpectedReaderInfo
@@ -10,18 +10,26 @@ from .hf_reader_ascii import HfReaderAscii
 
 @ExpectedReaderInfo("QUASAR_MX", "QUASAR_MX", 2.18)
 class QuasarMX(HfReaderAscii):
-    """metraTec Quasar MX
+    """Metratec QuasarMX class
     """
 
     def __init__(self, instance: str, hostname: str = "", port: int = 10001, serial_port: str = "") -> None:
-        """Create a new QuasarMX instance. If the reader is connected via an Ethernet cable,
-        the hostname attribute must be set. If the reader is connected via a USB cable, the serial port must be set.
+        """Create a new QuasarMX object.
+
+        If the reader is connected via an Ethernet cable, the hostname
+        attribute must be set. If the reader is connected via a USB cable,
+        the serial port must be set.
 
         Args:
-            instance (str): The reader name
-            address (str): The hostname of the reader
-            port (int): the tcp connection port of the reader, defaults to 10001
-            serial_port (str): The serial port of the reader
+            instance (str): The reader name. This is purely for
+                identification within the software and can be anything,
+                even an empty string.
+
+            hostname (str): The hostname of the reader.
+
+            port (int): The TCP connection port of the reader, defaults to 10001.
+
+            serial_port (str): The serial port of the reader.
 
     """
         if hostname == "" and serial_port == "":

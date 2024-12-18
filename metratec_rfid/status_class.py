@@ -18,18 +18,18 @@ class BaseClass:
         self._cb_status: Optional[Callable] = None
 
     def get_logger(self) -> logging.Logger:
-        """return the logger
+        """Return the logger.
 
         Returns:
-            logging.Logger: the logger for this instance
+            logging.Logger: The logger for this instance.
         """
         return self._logger
 
     def get_name(self) -> str:
-        """the reader name
+        """Get the reader name.
 
         Returns:
-            str: the reader name
+            str: The reader name.
         """
         return self._name
 
@@ -52,13 +52,19 @@ class BaseClass:
             self._cb_status(self._status.copy())
 
     def set_cb_status(self, callback: Optional[Callable]) -> Optional[Callable]:
-        """
-        Set the callback for status changes. The callback has the following arguments:
-        * status (Dict[str, Any]) - the new reader status dictionary, which contains at
-        least the 'status', the 'message', 'timestamp' and the instance name if specified
+        """Set the callback for status changes.
+
+        Define a callback which will be triggered whenever the status of
+        the reader changes. The callback has the following arguments:
+
+        * status (Dict[str, Any]) - The new reader status dictionary, which
+          contains at least the 'status', 'message' and 'timestamp' keys.
+
+        Args:
+            callback (Callable): Reference to the callback function to use.
 
         Returns:
-            Optional[Callable]: the old callback
+            Optional[Callable]: The old callback.
         """
         old = self._cb_status
         self._cb_status = callback

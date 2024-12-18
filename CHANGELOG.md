@@ -1,5 +1,17 @@
 # Release Notes
 
+## 1.3.0
+
+* Added new reader classes
+* Updated class and method descriptions
+* Updated code examples
+* Added new UHF reader features
+  * Select tag function
+  * Short range and protected mode
+  * Channel mask setting
+  * Device temperature query
+* Various bugfixes and improved error handling
+
 ## 1.2.0
 
 * nfc reader added

@@ -85,13 +85,14 @@ class RfidReader(BaseClass):
         self._last_message_time: float = 0
 
     async def connect(self, timeout: float = 5.0) -> None:
-        """Connect the reader
+        """Connect the reader.
 
         Args:
-            timeout (float, optional): Maximum waiting time for the connection. Defaults to 5.0.
+            timeout (float, optional): Maximum waiting time for the connection.
+                Defaults to 5.0 seconds.
 
         Raises:
-            RfidReaderException: Reader error or connection timeout
+            RfidReaderException: Reader error or connection timeout.
         """
         if self._connection.is_connected():
 
@@ -115,7 +116,7 @@ class RfidReader(BaseClass):
                 raise RfidReaderException("Connection timeout")
 
     async def disconnect(self) -> None:
-        """Disconnect the reader
+        """Disconnect the reader.
         """
         # stop continuous inventories:
         if self._connection.is_connected():
@@ -130,18 +131,18 @@ class RfidReader(BaseClass):
         self._send = self._send_not_connected
 
     def is_connected(self) -> bool:
-        """True if connected
+        """Return whether the reader is connected.
 
         Returns:
-            bool: connected
+            bool: True if connected.
         """
         return self._connection.is_connected()
 
     def is_running(self) -> bool:
-        """True if the reader is working correctly
+        """Return whether the reader is running.
 
         Returns:
-            bool: running
+            bool: True if the reader is running correctly.
         """
         return self._status['status'] == self.RUNNING
 
@@ -157,14 +158,29 @@ class RfidReader(BaseClass):
         self._cb_inventory = callback
         return old
 
+    # FIXME move to IO?
     def set_cb_input_changed(self, callback: Optional[Callable]) -> Optional[Callable]:
-        """
-        Set the callback for the input changed event. The callback has the following arguments:
-        * pin (int) - the changed pin
-        * value (boolean) - the new value
+        """Set the callback for the input-changed event.
+
+        Define a callback which will be triggered whenever an input pin
+        changes its value. The callback has the following arguments:
+
+        * pin (int) - The changed pin number.
+        * value (boolean) - The pin state.
+
+        Use `enable_input_events()` to activate.
+
+        Args:
+            callback (Callable): Reference to the callback function to use.
 
         Returns:
-            Optional[Callable]: the old callback
+            Optional[Callable]: The old callback.
+
+        Example:
+            >>> def my_callback(pin, value)
+            >>>     pass
+            >>> set_cb_input_changed(my_callback)
+            >>> enable_input_events()
         """
         old = self._cb_input_changed
         self._cb_input_changed = callback
@@ -173,24 +189,29 @@ class RfidReader(BaseClass):
         return old
 
     def enable_fire_empty_inventory(self, enable: bool):
-        """If the event handler for new inventory is set and this value is true,
-        an empty inventory also triggers the event handler
+        """En-/disable callbacks for empty inventories.
+
+        By default, the event handler for inventories, which can be defined
+        with `set_cb_inventory()`, is not called when an inventory was
+        technically successful but no tags have been found.
+        If this is set to `True`, empty inventories will also trigger
+        the defined callback.
 
         Args:
-            enable (bool): Set to true, to trigger empty inventories events as well. Defaults to false
+            enable (bool): Set to True, to enable empty inventory events.
         """
         self._fire_empty_inventories = enable
 
     async def fetch_inventory(self, wait_for_tags: bool = False) -> List[Tag]:
         """
         Can be called when an inventory has been started. Waits until at least one tag is found
-        and returns all currently scanned transponders from a continuous scan
+        and returns all currently scanned transponders from a continuous scan.
 
         Args:
-            wait_for_tags (bool): Set to true, to wait until transponders are available
+            wait_for_tags (bool): Set to true, to wait until transponders are available.
 
         Returns:
-            List[Tag]: a list with the transponder found
+            List[Tag]: A list with the transponders found.
         """
         async with self._inventory_condition:
             if wait_for_tags:
@@ -201,26 +222,32 @@ class RfidReader(BaseClass):
             return inventory
 
     async def set_heartbeat(self, interval: int) -> None:
-        """set the reader heartbeat
+        """Set the heartbeat interval of the reader.
+
+        If the interval is larger than 0, the SDK will regularly check
+        whether the reader is still connected and automatically
+        attempt to re-connect and raise and error on failure.
 
         Args:
-            interval (float): interval in seconds
+            interval (float): Interval in seconds [0, 60].
         """
         self._heartbeat = interval
         if self.is_connected():
             self._timeout = 2.5 * self._heartbeat
 
     def get_status(self) -> Dict[str, Any]:
-        """return the current status information
+        """Return status information about the reader.
+
+        The status information dictionary contains the following keys:
+
+        * instance (str): Name of the reader.
+        * status (int): Reader status enum (RUNNING = 1, BUSY = 0,
+          ERROR = -1, WARNING = -2).
+        * message (str): Status message.
+        * timestamp (float): Timestamp of the last status change.
 
         Returns:
-            dict: status information which contains at least following keys:
-                name (str): receiver name
-                address (str): receiver communication address
-                port (int): receiver communication port
-                eid (str): receiver eid
-                status (int): current status
-                message (str): status message
+            Dict[str, Any]: Dictionary with status information.
         """
         return self._status
 
@@ -242,197 +269,83 @@ class RfidReader(BaseClass):
             list[str]: The reader responses. In case of an set command the list is empty
         """
 
-    @abstractmethod
-    async def get_inputs(self) -> Dict[int, bool]:
-        """Return the current input pin values
-
-        Raises:
-            RfidReaderException: if an reader error occurs
-
-        Returns:
-            dict: the input pin values by the pin
-        """
-
-    @abstractmethod
-    async def get_input(self, pin: int) -> bool:
-        """Return the current input pin value
-
-        Raises:
-            RfidReaderException: if an reader error occurs
-
-        Returns:
-            int: the input pin value
-        """
-
-    @abstractmethod
-    async def get_outputs(self) -> Dict[int, bool]:
-        """Return the current output pin values
-
-        Raises:
-            RfidReaderException: if an reader error occurs
-
-        Returns:
-            dict: the output pin values by the pin
-        """
-
-    @abstractmethod
-    async def get_output(self, pin: int) -> bool:
-        """Return the current output pin value
-
-        Raises:
-            RfidReaderException: if an reader error occurs
-
-        Returns:
-            int: the output pin value
-        """
-
-    @abstractmethod
-    async def set_outputs(self, outputs: Dict[int, bool]) -> None:
-        """Return the current output pin values
-
-        Raises:
-            RfidReaderException: if an reader error occurs
-
-        Returns:
-            dict: the output pin values by the pin
-        """
-
-    @abstractmethod
-    async def set_output(self, pin: int, value: bool) -> None:
-        """Return the current output pin values
-
-        Raises:
-            RfidReaderException: if an reader error occurs
-
-        Returns:
-            dict: the output pin values by the pin
-        """
-
+    # FIXME move to IO?
     @abstractmethod
     async def enable_input_events(self, enable: bool = True) -> None:
-        """Enable the reader input events
+        """En-/disable the reader input events.
+
+        Whenever the state of an input pin changes, the event handler
+        defined with `set_cb_input_changed()` will be triggered.
 
         Args:
-            enable (bool, optional): True for enable. Defaults to True.
+            enable (bool, optional): True to enable. Defaults to True.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
         """
 
     @abstractmethod
     async def get_reader_info(self) -> Dict[str, Any]:
-        """Returns the reader information
+        """Return hard- and software information of the reader.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
 
         Returns:
-            dict: With the 'firmware', 'firmware_version', 'hardware', 'hardware_version'
-                  and 'serial_number' information
+            Dict[str, Any]: Dictionary with 'firmware', 'firmware_version',
+            'hardware', 'hardware_version' and 'serial_number' keys.
         """
 
     @abstractmethod
     async def set_antenna(self, antenna: int) -> None:
-        """Setting the antenna to be used
+        """Set the antenna port to be used.
 
         Args:
-            antenna (int): the antenna port to be use. Must lie in the interval [1,4]
+            antenna (int): The antenna port to be used.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
         """
 
     @abstractmethod
     async def get_antenna(self) -> int:
-        """Return the currently used antenna port
+        """Return the currently used antenna port.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
 
         Returns:
-            int: the antenna to use
-        """
-
-    @abstractmethod
-    async def set_antenna_multiplex(self, antennas) -> None:
-        """Number of antennas to be multiplexed
-
-        Args:
-            antennas (int): Number of antennas to be multiplexed. Must lie in the interval [1,4]
-
-        Raises:
-            RfidReaderException: if an reader error occurs
-        """
-
-    @abstractmethod
-    async def get_antenna_multiplex(self):
-        """Return the number of antennas to be multiplexed
-
-        Raises:
-            RfidReaderException: if an reader error occurs
-
-        Returns:
-            int: the number of antennas to be multiplexed
+            int: The currently used antenna port.
         """
 
     @abstractmethod
     async def get_inventory(self):
-        """get the current inventory from the current antenna (see set_antenna)
+        """Get an inventory from the current antenna.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
 
         Returns:
-            List[Tag]: An array with the transponder found
-        """
-
-    @abstractmethod
-    async def get_inventory_multi(self, ignore_error: bool = False):
-        """get the current inventory. Multiple antennas are used (see set_antenna_multiplex)
-
-        Args:
-            ignore_error (bool, optional): Set to True to ignore antenna errors. Defaults to False.
-
-        Raises:
-            RfidReaderException: if an reader error occurs
-
-        Returns:
-            List[Tag]: An array with the transponder found
+            List[Tag]: An array with the transponders found.
         """
 
     @abstractmethod
     async def start_inventory(self) -> None:
-        """Starts the continuos inventory. Multiple antennas are used (see set_antenna_multiplex)
+        """Start a continuous inventory.
+
+        This will cause the reader to perform inventories continuously
+        until the `stop_inventory()` function is called.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
         """
 
     @abstractmethod
     async def stop_inventory(self) -> None:
-        """stop the continuos inventory
+        """Stop the continuous inventory.
 
         Raises:
-            RfidReaderException: if an reader error occurs
-        """
-
-    @abstractmethod
-    async def start_inventory_multi(self, ignore_error: bool = False) -> None:
-        """Starts the continuos inventory. Multiple antennas are used (see set_antenna_multiplex)
-
-        Args:
-            ignore_error (bool, optional): Set to True to ignore antenna errors. Defaults to False.
-
-        Raises:
-            RfidReaderException: if an reader error occurs
-        """
-
-    @abstractmethod
-    async def stop_inventory_multi(self) -> None:
-        """stop the continuos inventory
-
-        Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
         """
 
     ###############################################################################################

@@ -30,12 +30,24 @@ class UhfReaderAscii(ReaderAscii):
     # @override
     def set_cb_inventory(self, callback: Optional[Callable[[List[UhfTag]], None]]
                          ) -> Optional[Callable[[List[UhfTag]], None]]:
-        """
-        Set the callback for a new inventory. The callback has the following arguments:
-        * tags (List[UhfTag]) - the tags
+        """Set the callback for a new inventory.
+
+        Define a callback which will be triggered whenever a new inventory
+        result is available. The callback has the following arguments:
+
+        * tags (List[UhfTag]) - List of transponders found in the inventory.
+
+        Args:
+            callback (Callable): Reference to the callback function to use.
 
         Returns:
-            Optional[Callable]: the old callback
+            Optional[Callable]: The old callback.
+
+        Example:
+            >>> def my_callback(tags)
+            >>>     for tag in tags:
+            >>>         print(tag.get_epc())
+            >>> set_cb_inventory(my_callback)
         """
         return super().set_cb_inventory(callback)
 
@@ -50,47 +62,52 @@ class UhfReaderAscii(ReaderAscii):
             await super().enable_input_events(enable)
 
     def set_input_debounce_time(self, debounce_time: float):
-        """Set the input debounce time (for the input event)
+        """Set the input debounce time (for the input event).
 
         Args:
-            debounce_time (float): the debounce time in partial seconds. Default is 0.05 seconds
+            debounce_time (float): The debounce time in partial seconds.
+                Default is 0.05 seconds.
         """
         self._input_debounce_time = debounce_time if debounce_time >= 0.0 else 0.0
 
     async def set_region(self, region: str) -> None:
-        """Sets the used uhf region
+        """Set the used UHF region.
+
+        This has to match the region you are in as well as the antenna(s)
+        that are connected to the reader.
 
         Args:
-            region (Region): the uhf region ('ETS', 'ISR', 'FCC'). Defaults to 'ETS'
+            region (str): The UHF region, e.g. "ETS", "ISR" or "FCC".
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
         """
         await self._set_command("STD", region)
 
     async def set_profile_parameter(self, parameter: str, value: Any) -> None:
-        """Sets a reader profile parameter
+        """Set a reader profile parameter.
 
         Args:
-            parameter (str): the parameter
+            parameter (str): The parameter name.
 
-            value: the parameter value
+            value (Any): The parameter value.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
         """
         await self._set_command("CFG", parameter, value if not isinstance(value, bool) else "ON" if value else "OFF")
 
     async def get_profile_parameter(self, parameter: str) -> str:
-        """Gets a reader profile parameter
+        """Get a reader profile parameter.
 
         Args:
-            parameter (str): the parameter
+            parameter (str): The parameter name.
 
-            value: the parameter value
+        Returns:
+            str: The parameter value.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
         """
         data: str = await self._get_command("CFG", "PRP")
         lines: List[str] = data.split('\r')
@@ -103,13 +120,13 @@ class UhfReaderAscii(ReaderAscii):
         raise RfidReaderException(f"Unknown parameter - {parameter}")
 
     async def set_power(self, power: int) -> None:
-        """Sets the reader power
+        """Set the reader power.
 
         Args:
-            power (int): the reader power
+            power (int): The reader power.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
         """
         try:
             await self.set_profile_parameter("PWR", power)
@@ -119,25 +136,25 @@ class UhfReaderAscii(ReaderAscii):
             raise err
 
     async def get_power(self) -> int:
-        """Get the current reader power value
+        """Get the current RF power value for inventories.
 
         Returns:
-            int: the reader power value
+            int: The power value in dBm.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
         """
         value = await self.get_profile_parameter("PWR")
         return int(value)
 
     async def set_tag_size(self, tags_size: int) -> None:
-        """Configure the expected numbers of transponders in the field
+        """Configure the expected numbers of transponders in the field.
 
         Args:
-            tags_size (int): expected numbers of transponders
+            tags_size (int): Expected number of transponders.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
         """
         q_start: int = 0
         while tags_size > pow(2, q_start):
@@ -180,164 +197,172 @@ class UhfReaderAscii(ReaderAscii):
         return await super().start_inventory_multi(ignore_error, single_slot, only_new_tags)
 
     async def set_mask(self, mask: str, memory: str = "EPC", start: int = 0, bit_length: Optional[int] = None) -> None:
-        """Set a mask
+        """Set a mask for all inventory operations.
+
+        If this is enabled, inventories will filter transponders and
+        only operate on tags whose data match the specified mask.
 
         Args:
-            mask (str): the mask (hex)
+            mask (str): The mask data (hex).
 
-            memory (str, optional): the memory for the mask. ['PC','EPC','USR','TID'] Defaults to "EPC".
+            start (int, optional): Start byte (or bit). Defaults to 0.
 
-            start (int, optional): start bit. Defaults to 0.
+            memory (str, optional): The memory for the mask
+                ['PC','EPC','USR','TID']. Defaults to 'EPC'.
 
-            bit_length (int, optional): Bits to check. Defaults to 0.
+            bit_length (int, optional): Bits from the mask to check.
+                Defaults to 0, which will use the complete mask.
+                If used, 'start' is interpreted in bits.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
+
         """
         await self._set_command("SET", "MSK", memory, mask, f'{start:x}' if start >= 0 else None,
                                 f'{bit_length:x}' if bit_length else None)
 
     async def set_epc_mask(self, mask: str, start: int = 0, bit_length: Optional[int] = None) -> None:
-        """Set a mask
+        """Set an EPC mask for inventories.
 
         Args:
-            mask (str): the mask (hex)
+            mask (str): The mask value (hex).
 
-            start (int, optional): start bit. Defaults to 0.
+            start (int, optional): Start bit. Defaults to 0.
 
             bit_length (int, optional): Bits to check. Defaults to 0.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
         """
         await self.set_mask(mask, "EPC", 32 + start, bit_length)
 
     async def reset_mask(self) -> None:
-        """Remove the mask
+        """Reset and disable inventory mask.
         """
         await self._set_command("SET", "MSK", "OFF")
 
     async def read_tag_memory(self, start: int = 0, length: int = 1, memory: str = 'USR',
                               ssl: bool = False) -> Dict[str, Any]:
-        """Read the memory of the found transponder
+        """Read the memory of the found transponder.
 
         Args:
-            start (int, optional): Beginning at word... Defaults to 0.
+            start (int, optional): Beginning at this word. Defaults to 0.
 
             length (int, optional): Words to read. Defaults to 1.
 
-            epc_mask (str, optional): Epc mask filter. Defaults to None.
+            epc_mask (str, optional): EPC mask filter. Defaults to None.
 
             memory (str, optional): Memory bank to read ["EPC","RES", "TID", "USR"].
-            Defaults to "USR".
+                Defaults to "USR".
 
-            ssl (bool, optional): When set to true, only one tag is expected. Defaults to False.
+           ssl (bool, optional): When set to True, only one tag is expected.
+                Defaults to False.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
 
         Returns:
-            Dict['transponders', List[UhfTag]]: The read transponders
-
-            Dict['errors', List[UhfTag]]: the transponder with an error
-
-            Dict['timestamp', float]: the timestamp
+            Dict[str, Any]: Dictionary with the read transponders
+            `Dict['transponders', List[UhfTag]]`, the transponders with
+            an error `Dict['errors', List[UhfTag]]` and the timestamp
+            of the execution `Dict['timestamp', float]`.
         """
         self._inv_called = False
         return await self._get_last_inventory("RDT", "SSL" if ssl else None, memory, f'{start:x}', f'{length:x}')
 
     async def write_tag_memory(self, data: str, start: int = 0, memory: str = 'USR',
                                ssl: bool = False) -> Dict[str, Any]:
-        """Write the data to the found transponder
+        """Write the data to the found transponder.
 
         Args:
-            data (str): _description_
+            data (str): The data to write (hex).
 
-            start (int, optional): Beginning at word... Defaults to 0.
+            start (int, optional): Beginning at this word. Defaults to 0.
 
-            memory (str, optional): Memory bank to read ["EPC","RES", "USR"].
-            Defaults to "USR".
+            memory (str, optional): Memory bank to write ["EPC", "RES", "USR"].
+                Defaults to "USR".
 
-            ssl (bool, optional): When set to true, only one tag is expected. Defaults to False.
+            ssl (bool, optional): When set to True, only one tag is expected.
+                Defaults to False.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
 
         Returns:
-            Dict['transponders', List[UhfTag]]: The read transponders
-
-            Dict['errors', List[UhfTag]]: the transponder with an error
-
-            Dict['timestamp', float]: the timestamp
+            Dict[str, Any]: Dictionary with the read transponders
+            `Dict['transponders', List[UhfTag]]`, the transponders with
+            an error `Dict['errors', List[UhfTag]]` and the timestamp
+            of the execution `Dict['timestamp', float]`.
         """
         self._last_write_data = data
         self._inv_called = False
         return await self._get_last_inventory("WDT", "SSL" if ssl else None, memory, f'{start:x}', data)
 
     async def read_tag_data(self, start: int = 0, length: int = 1, ssl: bool = False) -> Dict[str, Any]:
-        """read the usr memory of the found transponder
+        """Read the USR memory of the found transponder.
 
         Args:
-            start (int, optional): Beginning at word... Defaults to 0.
+            start (int, optional): Beginning at this word. Defaults to 0.
 
             length (int, optional): Words to read. Defaults to 1.
 
-            ssl (bool, optional): When set to true, only one tag is expected. Defaults to False.
+            ssl (bool, optional): When set to True, only one tag is expected.
+                Defaults to False.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
 
         Returns:
-            Dict['transponders', List[UhfTag]]: The read transponders
-
-            Dict['errors', List[UhfTag]]: the transponder with an error
-
-            Dict['timestamp', float]: the timestamp
+            Dict[str, Any]: Dictionary with the read transponders
+            `Dict['transponders', List[UhfTag]]`, the transponders with
+            an error `Dict['errors', List[UhfTag]]` and the timestamp
+            of the execution `Dict['timestamp', float]`.
         """
         return await self.read_tag_memory(start, length, 'USR', ssl)
 
     async def write_tag_data(self, data: str, start: int = 0, ssl: bool = False) -> Dict[str, Any]:
-        """write the usr memory of the found transponder
+        """Write the USR memory of the found transponder.
 
         Args:
-            data (str): the data to write (Hex)
+            data (str): The data to write (hex).
 
-            start (int, optional): Beginning at word... Defaults to 0.
+            start (int, optional): Beginning at this word. Defaults to 0.
 
-            ssl (bool, optional): When set to true, only one tag is expected. Defaults to False.
+            ssl (bool, optional): When set to True, only one tag is expected.
+                Defaults to False.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
 
         Returns:
-            Dict['transponders', List[UhfTag]]: The read transponders
-
-            Dict['errors', List[UhfTag]]: the transponder with an error
-
-            Dict['timestamp', float]: the timestamp
+            Dict[str, Any]: Dictionary with the read transponders
+            `Dict['transponders', List[UhfTag]]`, the transponders with
+            an error `Dict['errors', List[UhfTag]]` and the timestamp
+            of the execution `Dict['timestamp', float]`.
         """
         return await self.write_tag_memory(data, start, 'USR', ssl)
 
     async def write_tag_epc(self, new_epc: str, ssl: bool = False) -> Dict[str, Any]:
-        """write the epc memory of the found transponder
+        """Write the EPC memory of the found transponder.
 
         Args:
-            epc (str): the new epc - the length must be a multiple of 4
+            epc (str): The new EPC value. The length must be a multiple
+                of 4 hex characters.
 
-            ssl (bool, optional): When set to true, only one tag is expected. Defaults to False.
+            ssl (bool, optional): When set to True, only one tag is expected.
+                Defaults to False.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
 
         Returns:
-            Dict['transponders', List[UhfTag]]: The written transponders
-
-            Dict['errors', List[UhfTag]]: the transponder with an error
-
-            Dict['timestamp', float]: the timestamp
+            Dict[str, Any]: Dictionary with the read transponders
+            `Dict['transponders', List[UhfTag]]`, the transponders with
+            an error `Dict['errors', List[UhfTag]]` and the timestamp
+            of the execution `Dict['timestamp', float]`.
         """
         if len(new_epc) % 4:
-            raise RfidReaderException(" The new epc length must be a multiple of 4")
+            raise RfidReaderException(" The new EPC length must be a multiple of 4")
         # prepare new data block 01 with the epc length
         epc_words: int = int(len(new_epc) / 4)
         block01: int = int(epc_words / 2) << 12
@@ -370,34 +395,35 @@ class UhfReaderAscii(ReaderAscii):
         return response
 
     async def read_tag_tid(self, start: int = 0, length: int = 2, ssl: bool = False) -> Dict[str, Any]:
-        """read the tid of the found transponder
+        """Read the TID of the found transponder.
 
         Args:
-            start (int, optional): Beginning at word... Defaults to 0.
+            start (int, optional): Beginning at this word. Defaults to 0.
 
             length (int, optional): Words to read. Defaults to 4.
 
-            epc_mask (str, optional): Epc mask filter. Defaults to None.
+            epc_mask (str, optional): EPC mask filter. Defaults to None.
 
-            ssl (bool, optional): When set to true, only one tag is expected. Defaults to False.
+            ssl (bool, optional): When set to True, only one tag is expected.
+                Defaults to False.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
 
         Returns:
-            Dict['transponders', List[UhfTag]]: The read transponders
-
-            Dict['errors', List[UhfTag]]: the transponder with an error
-
-            Dict['timestamp', float]: the timestamp
+            Dict[str, Any]: Dictionary with the read transponders
+            `Dict['transponders', List[UhfTag]]`, the transponders with
+            an error `Dict['errors', List[UhfTag]]` and the timestamp
+            of the execution `Dict['timestamp', float]`.
         """
         return await self.read_tag_memory(start, length, 'TID', ssl)
 
     async def set_access_password(self, password: str) -> None:
-        """Sets the access password for authenticated access
+        """Set the access password for authenticated access.
 
         Args:
-            password (str): 8 characters long hexadecimal password (32bit access code)
+            password (str): 8 characters long hexadecimal password
+                (32bit access code).
         """
         await self._set_command("SET", "ACP", password)
 
@@ -408,282 +434,329 @@ class UhfReaderAscii(ReaderAscii):
         await self._set_command("SET", "ACP", "OFF")
 
     async def save_access_password(self, slot: int, password: str) -> None:
-        """Storing an access password in a non-volatile memory of the reader for later use
-        (so you don't have to transmit it over an unsecure line later)
+        """Store an access password in a non-volatile memory of the
+        reader for later use
+        (so you don't have to transmit it over an unsecure line later).
 
         Args:
-            slot (int): slot number [0,7]
-            password (str): 8 characters long hexadecimal password (32bit access code)
+            slot (int): The slot number [0,7].
+
+            password (str): 8 characters long hexadecimal password
+                (32 bit access code).
         """
         await self._set_command("SET", "APS", password, slot)
 
     async def load_access_password(self, slot: int) -> None:
-        """Load a stored access password from a non-volatile storage location. This is useful
-        for higher security as the password is not sent over an insecure line.
+        """Load a stored access password from a non-volatile storage location.
+
+        This is useful for higher security as the password is not sent
+        over an insecure line.
 
         Args:
-            slot (int): slot number [0,7]
+            slot (int): The slot number [0,7].
         """
         await self._set_command("SET", "APL", slot)
 
     async def read_tag_access_password(self, ssl: bool = False) -> Dict[str, Any]:
-        """read the access password of the found transponder.
+        """Read the access password of the found transponder.
 
         Args:
-            ssl (bool, optional): When set to true, only one tag is expected. Defaults to False.
+            ssl (bool, optional): When set to True, only one tag is expected.
+                Defaults to False.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
 
         Returns:
-            Dict['transponders', List[UhfTag]]: The read transponders
-
-            Dict['errors', List[UhfTag]]: the transponder with an error
-
-            Dict['timestamp', float]: the timestamp
+            Dict[str, Any]: Dictionary with the read transponders
+            `Dict['transponders', List[UhfTag]]`, the transponders with
+            an error `Dict['errors', List[UhfTag]]` and the timestamp
+            of the execution `Dict['timestamp', float]`.
         """
         self._inv_called = False
         return await self._get_last_inventory("RDT", "SSL" if ssl else None, "ACP")
 
     async def write_tag_access_password(self, password: str, ssl: bool = False) -> Dict[str, Any]:
-        """Write the access password of the found transponder
+        """Write the access password of the found transponder.
 
         Args:
-            password (str): 8 characters long hexadecimal password (32bit access code)
+            password (str): 8 characters long hexadecimal password
+                (32bit access code).
 
-            ssl (bool, optional): When set to true, only one tag is expected. Defaults to False.
+            ssl (bool, optional): When set to True, only one tag is expected.
+                Defaults to False.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
 
         Returns:
-            Dict['transponders', List[UhfTag]]: The read transponders
-
-            Dict['errors', List[UhfTag]]: the transponder with an error
-
-            Dict['timestamp', float]: the timestamp
+            Dict[str, Any]: Dictionary with the read transponders
+            `Dict['transponders', List[UhfTag]]`, the transponders with
+            an error `Dict['errors', List[UhfTag]]` and the timestamp
+            of the execution `Dict['timestamp', float]`.
         """
         self._last_write_data = password
         self._inv_called = False
         return await self._get_last_inventory("WDT", "SSL" if ssl else None, "ACP", password)
 
     async def lock_tag_memory(self, mode: int, memory: str, ssl: bool = False) -> Dict[str, Any]:
-        """The Lock command is used to set the access rights of the different data blocks, including
-        the access password itself and the kill password. To use this command you have to be in the
-        secured state (i.e. authenticated yourself with the correct password).
+        """ Lock a memory bank of a transponder.
+
+        The Lock command is used to set the access rights of the different
+        data blocks, including the access password itself and the kill password.
+        To use this command you have to be in the secured state
+        (i.e. authenticated yourself with the correct password).
+
+        Note: The 'EPC', 'TIC', 'USR' memory are in any case readable.
 
         Args:
             mode (int):
-            '0' data is writeable and readable in any case.
-            '1' data is writeable and readable and may never be locked.
-            '2' data is only writeable and readable in secured state.
-            '3' data is not writeable or readable.
-            Note: The 'EPC', 'TIC', 'USR' memory are in any case readable.
+                '0': Data is writeable and readable in any case.
 
-            memory (str): Memory bank to lock. Available: ["EPC", "TID", "USR", "ACP", "KLP"].
+                '1': Data is writeable and readable and may never be locked.
 
-            ssl (bool, optional): When set to true, only one tag is expected. Defaults to False.
+                '2': Data is only writeable and readable in secured state.
+
+                '3': Data is not writeable or readable.
+
+            memory (str): Memory bank to lock.
+                Available: ["EPC", "TID", "USR", "ACP", "KLP"].
+
+            ssl (bool, optional): When set to True, only one tag is expected.
+                Defaults to False.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
 
         Returns:
-            Dict['transponders', List[UhfTag]]: The read transponders
-
-            Dict['errors', List[UhfTag]]: the transponder with an error
-
-            Dict['timestamp', float]: the timestamp
+            Dict[str, Any]: Dictionary with the read transponders
+            `Dict['transponders', List[UhfTag]]`, the transponders with
+            an error `Dict['errors', List[UhfTag]]` and the timestamp
+            of the execution `Dict['timestamp', float]`.
         """
         self._last_write_data = "lock_tag"
         self._inv_called = False
         return await self._get_last_inventory("LCK", "SSL" if ssl else None, memory, mode)
 
     async def lock_tag_epc(self, mode: int, ssl: bool = False) -> Dict[str, Any]:
-        """Lock the tag epc memory. To use this command you have to be in the
-        secured state (i.e. authenticated yourself with the correct password).
+        """Lock the tag EPC memory.
+
+        To use this command you have to be in the secured state
+        (i.e. authenticated yourself with the correct password).
 
         Args:
             mode (int):
-            '0' epc is writeable in any case.
-            '1' epc is writeable and may never be locked.
-            '2' epc is only writeable in secured state.
-            '3' epc is not writeable.
+                '0': EPC is writeable in any case.
 
-            ssl (bool, optional): When set to true, only one tag is expected. Defaults to False.
+                '1': EPC is writeable and may never be locked.
+
+                '2': EPC is only writeable in secured state.
+
+                '3': EPC is not writeable.
+
+            ssl (bool, optional): When set to True, only one tag is expected.
+                Defaults to False.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
 
         Returns:
-            Dict['transponders', List[UhfTag]]: The read transponders
-
-            Dict['errors', List[UhfTag]]: the transponder with an error
-
-            Dict['timestamp', float]: the timestamp
+            Dict[str, Any]: Dictionary with the read transponders
+            `Dict['transponders', List[UhfTag]]`, the transponders with
+            an error `Dict['errors', List[UhfTag]]` and the timestamp
+            of the execution `Dict['timestamp', float]`.
         """
         return await self.lock_tag_memory(mode, "EPC", ssl)
 
     async def lock_tag_data(self, mode: int, ssl: bool = False) -> Dict[str, Any]:
-        """Lock the tag data memory. To use this command you have to be in the
-        secured state (i.e. authenticated yourself with the correct password).
+        """Lock the tag data memory.
+
+        To use this command you have to be in the secured state
+        (i.e. authenticated yourself with the correct password).
 
         Args:
             mode (int):
-            '0' data is writeable in any case.
-            '1' data is writeable and may never be locked.
-            '2' data is only writeable in secured state.
-            '3' data is not writeable.
+                '0': Data is writeable in any case.
 
-            ssl (bool, optional): When set to true, only one tag is expected. Defaults to False.
+                '1': Data is writeable and may never be locked.
+
+                '2': Data is only writeable in secured state.
+
+                '3': Data is not writeable.
+
+            ssl (bool, optional): When set to True, only one tag is expected.
+                Defaults to False.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
 
         Returns:
-            Dict['transponders', List[UhfTag]]: The read transponders
-
-            Dict['errors', List[UhfTag]]: the transponder with an error
-
-            Dict['timestamp', float]: the timestamp
+            Dict[str, Any]: Dictionary with the read transponders
+            `Dict['transponders', List[UhfTag]]`, the transponders with
+            an error `Dict['errors', List[UhfTag]]` and the timestamp
+            of the execution `Dict['timestamp', float]`.
         """
         return await self.lock_tag_memory(mode, "USR", ssl)
 
     async def lock_tag_access_password(self, mode: int, ssl: bool = False) -> Dict[str, Any]:
-        """Lock the tag access password memory. To use this command you have to be in the
-        secured state (i.e. authenticated yourself with the correct password).
+        """Lock the tag access password memory.
+
+        To use this command you have to be in the secured state
+        (i.e. authenticated yourself with the correct password).
 
         Args:
             mode (int):
-            '0' access password is writeable and readable in any case.
-            '1' access password is writeable and readable and may never be locked.
-            '2' access password is only writeable and readable in secured state.
-            '3' access password is not writeable or readable.
+                '0': Access password is writeable and readable in any case.
 
-            ssl (bool, optional): When set to true, only one tag is expected. Defaults to False.
+                '1': Access password is writeable and readable and may never be locked.
+
+                '2': Access password is only writeable and readable in secured state.
+
+                '3': Access password is not writeable or readable.
+
+            ssl (bool, optional): When set to True, only one tag is expected.
+                Defaults to False.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
 
         Returns:
-            Dict['transponders', List[UhfTag]]: The read transponders
-
-            Dict['errors', List[UhfTag]]: the transponder with an error
-
-            Dict['timestamp', float]: the timestamp
+            Dict[str, Any]: Dictionary with the read transponders
+            `Dict['transponders', List[UhfTag]]`, the transponders with
+            an error `Dict['errors', List[UhfTag]]` and the timestamp
+            of the execution `Dict['timestamp', float]`.
         """
         return await self.lock_tag_memory(mode, "ACP", ssl)
 
     async def lock_tag_kill_password(self, mode: int, ssl: bool = False) -> Dict[str, Any]:
-        """Lock the tag access password memory. To use this command you have to be in the
-        secured state (i.e. authenticated yourself with the correct password).
+        """Lock the tags kill password memory.
+
+        To use this command you have to be in the secured state
+        (i.e. authenticated yourself with the correct password).
 
         Args:
             mode (int):
-            '0' access password is writeable and readable in any case.
-            '1' access password is writeable and readable and may never be locked.
-            '2' access password is only writeable and readable in secured state.
-            '3' access password is not writeable or readable.
+                '0': Access password is writeable and readable in any case.
 
-            ssl (bool, optional): When set to true, only one tag is expected. Defaults to False.
+                '1': Access password is writeable and readable and may never be locked.
+
+                '2': Access password is only writeable and readable in secured state.
+
+                '3': Access password is not writeable or readable.
+
+            ssl (bool, optional): When set to True, only one tag is expected.
+                Defaults to False.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
 
         Returns:
-            Dict['transponders', List[UhfTag]]: The read transponders
-
-            Dict['errors', List[UhfTag]]: the transponder with an error
-
-            Dict['timestamp', float]: the timestamp
+            Dict[str, Any]: Dictionary with the read transponders
+            `Dict['transponders', List[UhfTag]]`, the transponders with
+            an error `Dict['errors', List[UhfTag]]` and the timestamp
+            of the execution `Dict['timestamp', float]`.
         """
         return await self.lock_tag_memory(mode, "KLP", ssl)
 
     async def set_kill_password(self, password: str) -> None:
-        """Set the kill password. For further details on this topic please refer to the
-        EPC Gen 2 Protocol Description and the kill command. The default kill password is 00000000
+        """Set the kill password.
+
+        For further details on this topic please refer to the EPC Gen 2
+        Protocol Description and the kill command.
+        The default kill password is 00000000.
 
         Args:
-            password (str): 8 characters long hexadecimal password (32bit access code)
+            password (str): 8 characters long hexadecimal password
+            (32bit access code).
         """
         await self._set_command("SET", "KLP", password)
 
     async def save_kill_password(self, slot: int, password: str) -> None:
-        """Storing an kill password in a non-volatile memory of the reader for later use
-        (so you don't have to transmit it over an unsecure line later)
+        """Store a kill password in a non-volatile memory of the reader
+        for later use
+        (so you don't have to transmit it over an unsecure line later).
 
         Args:
-            slot (int): slot number [0,7]
-            password (str): 8 characters long hexadecimal password (32bit access code)
+            slot (int): The slot number [0,7].
+
+            password (str): 8 characters long hexadecimal password
+                (32bit access code).
         """
         await self._set_command("SET", "KPS", password, slot)
 
     async def load_kill_password(self, slot: int) -> None:
-        """Load a stored kill password from a non-volatile storage location. This is useful
-        for higher security as the password is not sent over an insecure line.
+        """Load a stored kill password from a non-volatile storage location.
+
+        This is useful for higher security as the password is not sent
+        over an insecure line.
 
         Args:
-            slot (int): slot number [0,7]
+            slot (int): The slot number [0,7].
         """
         await self._set_command("SET", "KPL", slot)
 
     async def read_tag_kill_password(self, ssl: bool = False) -> Dict[str, Any]:
-        """read the kill password of the found transponder.
+        """Read the kill password of the found transponder.
 
         Args:
-            ssl (bool, optional): When set to true, only one tag is expected. Defaults to False.
+            ssl (bool, optional): When set to True, only one tag is expected.
+                Defaults to False.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
 
         Returns:
-            Dict['transponders', List[UhfTag]]: The read transponders
-
-            Dict['errors', List[UhfTag]]: the transponder with an error
-
-            Dict['timestamp', float]: the timestamp
+            Dict[str, Any]: Dictionary with the read transponders
+            `Dict['transponders', List[UhfTag]]`, the transponders with
+            an error `Dict['errors', List[UhfTag]]` and the timestamp
+            of the execution `Dict['timestamp', float]`.
         """
         self._inv_called = False
         return await self._get_last_inventory("RDT", "SSL" if ssl else None, "KPL")
 
     async def write_tag_kill_password(self, password: str, ssl: bool = False) -> Dict[str, Any]:
-        """Write the kill password of the found transponder
+        """Write the kill password of the found transponder.
 
         Args:
-            password (str): 8 characters long hexadecimal password (32bit access code)
+            password (str): 8 characters long hexadecimal password
+                (32bit access code).
 
-            ssl (bool, optional): When set to true, only one tag is expected. Defaults to False.
+            ssl (bool, optional): When set to True, only one tag is expected.
+                Defaults to False.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
 
         Returns:
-            Dict['transponders', List[UhfTag]]: The read transponders
-
-            Dict['errors', List[UhfTag]]: the transponder with an error
-
-            Dict['timestamp', float]: the timestamp
+            Dict[str, Any]: Dictionary with the read transponders
+            `Dict['transponders', List[UhfTag]]`, the transponders with
+            an error `Dict['errors', List[UhfTag]]` and the timestamp
+            of the execution `Dict['timestamp', float]`.
         """
         self._last_write_data = password
         self._inv_called = False
         return await self._get_last_inventory("WDT", "SSL" if ssl else None, "KLP", password)
 
     async def kill_tag(self, ssl: bool = False) -> Dict[str, Any]:
-        """Use to disable UHF Gen2 tags forever. Please set the kill password before use this command.
-        ATTENTION If you use this command incorrectly you can irreversibly kill a big number of UHF
-        tags in a very short time
+        """Permanently disable UHF Gen2 tags.
+
+        You must set the kill password before using this command.
+
+        ATTENTION! If you use this command incorrectly you can irreversibly
+        kill a big number of UHF tags in a very short time.
 
         Args:
-            ssl (bool, optional): When set to true, only one tag is expected. Defaults to False.
+            ssl (bool, optional): When set to True, only one tag is expected.
+                Defaults to False.
 
         Raises:
-            RfidReaderException: if an reader error occurs
+            RfidReaderException: If a reader error occurs.
 
         Returns:
-            Dict['transponders', List[UhfTag]]: The read transponders
-
-            Dict['errors', List[UhfTag]]: the transponder with an error
-
-            Dict['timestamp', float]: the timestamp
+            Dict[str, Any]: Dictionary with the read transponders
+            `Dict['transponders', List[UhfTag]]`, the transponders with
+            an error `Dict['errors', List[UhfTag]]` and the timestamp
+            of the execution `Dict['timestamp', float]`.
         """
         self._last_write_data = "kill"
         self._inv_called = False
@@ -701,13 +774,13 @@ class UhfReaderAscii(ReaderAscii):
     async def fetch_inventory(self, wait_for_tags: bool = True) -> List[UhfTag]:  # type: ignore
         """
         Can be called when an inventory has been started. Waits until at least one tag is found
-        and returns all currently scanned transponders from a continuous scan
+        and returns all currently scanned transponders from a continuous scan.
 
         Args:
-            wait_for_tags (bool): Set to true, to wait until transponders are available
+            wait_for_tags (bool): Set to true, to wait until transponders are available.
 
         Returns:
-            List[UhfTag]: a list with the transponder found
+            List[UhfTag]: A list with the transponders found.
         """
         return await super().fetch_inventory(wait_for_tags)  # type: ignore
 

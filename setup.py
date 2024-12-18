@@ -1,5 +1,5 @@
 '''
-Setup file the the metratec rfid sdk
+Setup file for the Metratec RFID SDK
 '''
 # Always prefer setuptools over distutils
 from os import path
@@ -17,8 +17,8 @@ with open(path.join(HERE, 'README.md'), encoding='utf-8') as f:
 # This call to setup() does all the work
 setup(
     name="metratec_rfid",
-    version="1.2.0",
-    description="metraTec rfid sdk",
+    version="1.3.0",
+    description="Metratec RFID SDK",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://www.metratec.com/",
