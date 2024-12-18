@@ -6,12 +6,13 @@ from abc import abstractmethod
 import asyncio
 from time import time
 from typing import Any, Callable, Dict, List, Optional
+from serial.tools import list_ports
 
 from .tag import Tag
-
 from .status_class import BaseClass
 from .reader_exception import RfidReaderException
 from .connection.connection import Connection
+from .connection.serial_connection import SerialConnection
 
 # disable 'Too many lines in module' warning - pylint: disable=C0302
 
@@ -84,23 +85,60 @@ class RfidReader(BaseClass):
         self._timeout: float = 25.0
         self._last_message_time: float = 0
 
-    async def connect(self, timeout: float = 5.0) -> None:
+    async def connect(self, timeout: float = 5.0, port_re: str = "USB") -> None:
         """Connect the reader.
+
+        If no port is set during initialization, it will be determined automatically.
+        For this, `port_re` will be used to filter potential serial ports.
 
         Args:
             timeout (float, optional): Maximum waiting time for the connection.
                 Defaults to 5.0 seconds.
+            port_re (str, optional): Regular expression for finding serial ports automatically.
+                Defaults to "USB".
 
         Raises:
             RfidReaderException: Reader error or connection timeout.
         """
         if self._connection.is_connected():
-
             self._update_status(self.BUSY, "configuring")
             self._send = lambda data: self._connection.send(data.encode())
             self._handle_data = self._data_received_config
             self._task_config = asyncio.ensure_future(self._config_device())
+            await self._connect(timeout=timeout)
+        elif isinstance(self._connection, SerialConnection):
+            port = self._connection.get_port()
+            if port:
+                port_list = [port]
+            else:
+                port_list = []
+                for p in list_ports.grep(port_re):
+                    port_list.append(p.device)
+
+            if len(port_list) == 0:
+                raise RfidReaderException("No connection port set or found automatically")
+
+            for port in port_list:
+                try:
+                    self._connection.set_port(port)
+                    await self._connect(timeout=timeout)
+                    self.get_logger().info("Connection attempt on port %s successful.", port)
+                    return
+                except RfidReaderException as e:
+                    self.get_logger().error("Connection attempt on port %s failed: %s", port, e)
+                    self._connection.disconnect()
+
+            raise RfidReaderException("Serial connection failed")
         else:
+            # assuming socket connection is the only alternative
+            address = self._connection.get_info().split(":")[0]
+            if not address:
+                # FIXME find reader via avahi/zeroconf
+                raise NotImplementedError("Auto-IP not available")
+            await self._connect(timeout=timeout)
+
+    async def _connect(self, timeout: float = 5.0) -> None:
+        if not self._connection.is_connected():
             self._handle_data = self._data_received_config
             self._connection.connect()
         max_time: float = time() + timeout

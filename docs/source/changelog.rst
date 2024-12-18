@@ -3,10 +3,17 @@
 Release Notes
 #############
 
+1.3.1
+=====
+
+* Reserved memory (RES) usable for read, write and (un)lock
+* Added `NfcMode` enum of NfcReaderAT to public module
+* Added automatic reader detection (USB)
+
 1.3.0
 =====
 
-:Release Date: TBD
+:Release Date: 2024-09-16
 
 * Added new reader classes
 * Updated class and method descriptions

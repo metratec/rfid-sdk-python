@@ -40,7 +40,7 @@ To use the library without installing it into your global Python packages, it is
 The library is packaged into an archive and can be installed via pip:
 
 ```
-python -m pip install metratec_rfid-1.3.0.tar.gz
+python -m pip install metratec_rfid-1.3.1.tar.gz
 ```
 
 ## Usage

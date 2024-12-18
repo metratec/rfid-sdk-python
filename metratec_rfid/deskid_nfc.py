@@ -20,7 +20,8 @@ class DeskIdNfc(NfcReaderAT, ReaderATSound):
                 identification within the software and can be anything,
                 even an empty string.
 
-            serial_port (str): The serial port to use.
+            serial_port (str): The serial port to use. Leave empty (`""`)
+                to determine automatically during `connect()`.
 
         """
         super().__init__(instance, SerialConnection(serial_port))

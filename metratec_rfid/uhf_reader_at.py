@@ -623,8 +623,8 @@ class UhfReaderAT(ReaderAT):
 
             epc_mask (str, optional): EPC mask filter. Defaults to None.
 
-            memory (str, optional): Memory bank to read ["PC","EPC","USR","TID"].
-            Defaults to "USR".
+            memory (str, optional): Memory bank to read ["PC","EPC","USR","TID", "RES"].
+                Defaults to "USR".
 
         Raises:
             RfidReaderException: If a reader error occurs.
@@ -703,8 +703,8 @@ class UhfReaderAT(ReaderAT):
 
             start (int, optional): Start byte. Defaults to 0.
 
-            memory (str, optional): Memory bank to write ["PC","EPC","USR"].
-            Defaults to "USR".
+            memory (str, optional): Memory bank to write ["PC","EPC","USR", "RES"].
+                Defaults to "USR".
 
             epc_mask (str, optional): EPC mask filter. Defaults to None.
 
@@ -876,7 +876,7 @@ class UhfReaderAT(ReaderAT):
         """Lock a memory bank of a transponder.
 
         Args:
-            membank (str): The memory to lock ['EPC', 'USR', 'LCK', 'KILL'].
+            membank (str): The memory to lock ['EPC', 'USR', 'LCK', 'KILL', 'RES'].
 
             password (str): The access password (32 bit, 8 hex digits).
 
@@ -928,7 +928,7 @@ class UhfReaderAT(ReaderAT):
         """Unlock a memory bank of a transponder.
 
         Args:
-            membank (str): The memory to unlock ['EPC', 'USR', 'LCK', 'KILL'].
+            membank (str): The memory to unlock ['EPC', 'USR', 'LCK', 'KILL', 'RES'].
 
             password (str): The access password (32 bit, 8 hex digits).
 
@@ -978,7 +978,7 @@ class UhfReaderAT(ReaderAT):
         """Permamently lock a memory bank of a transponder.
 
         Args:
-            membank (str): The memory to lock ['EPC', 'USR', 'LCK', 'KILL'].
+            membank (str): The memory to lock ['EPC', 'USR', 'LCK', 'KILL', 'RES'].
 
             password (str): The access password (32 bit, 8 hex digits).
 
@@ -988,7 +988,7 @@ class UhfReaderAT(ReaderAT):
             List[UhfTag]: List with handled tags. If a tag `has_error()`,
             the command was not successful.
         """
-        # membank: KILL,LCK,EPC,TID,USR
+        # membank: KILL,LCK,EPC,TID,USR,RES
         responses: List[str] = await self._send_command("AT+PLCK", membank, password, epc_mask)
         # AT+PLCK: USR,1234ABCD<CR>
         # <LF>
@@ -1029,8 +1029,11 @@ class UhfReaderAT(ReaderAT):
     async def set_lock_password(self, password: str, new_password, epc_mask: Optional[str] = None) -> List[UhfTag]:
         """Change the lock/access password of a tag.
 
+        This will automatically read- and write-lock the memory bank.
+
         Args:
-            password (str): The current access password (32 bit, 8 hex digits).
+            password (str): The current access password (32 bit, 8 hex digits)
+                or an empty string (`""`) if memory is unlocked.
 
             new_password (_type_): The new password (32 bit, 8 hex digits).
 
@@ -1053,8 +1056,11 @@ class UhfReaderAT(ReaderAT):
     async def set_kill_password(self, password: str, new_password, epc_mask: Optional[str] = None) -> List[UhfTag]:
         """Change the kill password of a tag.
 
+        This will automatically read- and write-lock the memory bank.
+
         Args:
-            password (str): The access password (32 bit, 8 hex digits).
+            password (str): The access password (32 bit, 8 hex digits)
+                or an empty string (`""`) if memory is unlocked.
 
             new_password (_type_): The kill password (32 bit, 8 hex digits).
 
@@ -1443,17 +1449,6 @@ class UhfReaderAT(ReaderAT):
                 tag.set_error_message(info[1])
             tags.append(tag)
         return tags
-
-    def _parse_error_response(self, response: str) -> RfidReaderException:
-        """analyse the reader error and return the resulting exception
-
-        Args:
-            response (str): error response
-
-        Returns:
-            RfidReaderException: resulting exception
-        """
-        return RfidReaderException(response)
 
 
 class UhfReaderATMulti(UhfReaderAT):

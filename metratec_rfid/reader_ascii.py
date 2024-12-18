@@ -40,9 +40,9 @@ class ReaderAscii(RfidReader):
         return response.split('\r')
 
     # @override
-    async def connect(self, timeout: float = 5.0) -> None:
+    async def connect(self, timeout: float = 5.0, port_re: str = "USB") -> None:
         self._connection.set_separator("\r")
-        await super().connect(timeout)
+        await super().connect(timeout=timeout, port_re=port_re)
 
     async def get_inputs(self) -> Dict[int, bool]:
         """Return the current input pin states.
@@ -159,17 +159,19 @@ class ReaderAscii(RfidReader):
             info['hardware_version'] = response[-8:-4]
             info['firmware'] = info['hardware']
             info['firmware_version'] = response[-4:]
-        expected = getattr(self, "_expected_reader", {})
-        if expected.get('hardware_name', 'unknown').lower() not in info['hardware'].lower():
-            raise RfidReaderException(
-                f"Wrong reader type! {expected.get('hardware_name','unknown')} expected, {info['hardware']} found")
-        if expected.get('firmware_name', 'unknown').lower() not in info['firmware'].lower():
-            raise RfidReaderException(f"Wrong reader firmware! {expected.get('firmware_name','unknown')} expected" +
-                                      f", {info['firmware']} found")
-        firmware_version = float(f"{info['firmware_version'][0:2]}.{info['firmware_version'][2:4]}")
-        if firmware_version < expected.get('min_firmware', 1.0):
-            raise RfidReaderException("Reader firmware version too low, please update! " +
-                                      f"Minimum {expected.get('min_firmware')} expected, {firmware_version} found")
+        # only check reader info if decorator present
+        expected = getattr(self, "_expected_reader", None)
+        if expected:
+            if expected.get('hardware_name', 'unknown').lower() not in info['hardware'].lower():
+                raise RfidReaderException(
+                    f"Wrong reader type! {expected.get('hardware_name','unknown')} expected, {info['hardware']} found")
+            if expected.get('firmware_name', 'unknown').lower() not in info['firmware'].lower():
+                raise RfidReaderException(f"Wrong reader firmware! {expected.get('firmware_name','unknown')} expected" +
+                                          f", {info['firmware']} found")
+            firmware_version = float(f"{info['firmware_version'][0:2]}.{info['firmware_version'][2:4]}")
+            if firmware_version < expected.get('min_firmware', 1.0):
+                raise RfidReaderException("Reader firmware version too low, please update! " +
+                                          f"Minimum {expected.get('min_firmware')} expected, {firmware_version} found")
         return info
 
     async def enable_antenna_report(self, enable: bool = True) -> None:

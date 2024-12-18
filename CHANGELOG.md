@@ -1,5 +1,11 @@
 # Release Notes
 
+## 1.3.1
+
+* Reserved memory (RES) usable for read, write and (un)lock
+* Added `NfcMode` enum of NfcReaderAT to public module
+* Added automatic reader detection (USB)
+
 ## 1.3.0
 
 * Added new reader classes
@@ -8,7 +14,7 @@
 * Added new UHF reader features
   * Select tag function
   * Short range and protected mode
-  * Channel mask setting
+  * Channel mask settting
   * Device temperature query
 * Various bugfixes and improved error handling
 

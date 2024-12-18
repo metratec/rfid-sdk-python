@@ -30,7 +30,8 @@ class PulsarMX(UhfReaderAscii):
 
             port (int): The TCP connection port of the reader, defaults to 10001.
 
-            serial_port (str): The serial port of the reader.
+            serial_port (str): The serial port to use. Leave empty (`""`)
+                to determine automatically during `connect()`.
 
         """
         if hostname == "" and serial_port == "":

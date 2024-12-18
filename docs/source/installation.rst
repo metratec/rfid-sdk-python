@@ -53,7 +53,7 @@ Preferably check out a release version (see `Github tags <https://github.com/met
 
 .. code:: bash
 
-   git checkout r1.3.0
+   git checkout r1.3.1
 
 Install the *metratec_rfid* library: 
 
@@ -65,4 +65,4 @@ Alternatively, install a specific version from Github directly:
 
 .. code:: bash
 
-   python -m pip install git+https://github.com/metratec/rfid-sdk-python@r1.3.0
+   python -m pip install git+https://github.com/metratec/rfid-sdk-python@r1.3.1

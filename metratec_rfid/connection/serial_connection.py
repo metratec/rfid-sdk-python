@@ -46,6 +46,18 @@ class SerialConnection(Connection):
         self._is_started: bool = False
         self._internal_task: Optional[asyncio.Task] = None
 
+    def get_port(self) -> str:
+        """Return the port of the connection."""
+        return self._port
+
+    def set_port(self, port: str):
+        """Set the port of the connection.
+
+        New setting is only applied when not connected.
+        """
+        if not self.is_connected():
+            self._port = port
+
     def get_info(self) -> str:
         return f"{self._port} ({self._baud_rate})"
 

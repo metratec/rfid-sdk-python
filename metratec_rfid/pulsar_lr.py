@@ -23,6 +23,8 @@ class PulsarLRBase(UhfReaderATMulti, ReaderATIO):
                 even an empty string.
 
             address (str): The IP address or serial port of the reader.
+                An empty string will try to determine the serial port
+                automatically during `connect()`.
 
             port (int): The TCP port to use.
 
@@ -35,7 +37,7 @@ class PulsarLRBase(UhfReaderATMulti, ReaderATIO):
             super().__init__(instance, SerialConnection(address))
 
 
-@ExpectedReaderInfo("PULSAR_LR", "PULSAR_LR", 1.0)
+@ExpectedReaderInfo("PULSAR_LR", "PULSAR_LR", 01.04)
 class PulsarLR(PulsarLRBase):
     """Metratec Pulsar LR class
     """

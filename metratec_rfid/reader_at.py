@@ -23,7 +23,6 @@ class ReaderAT(RfidReader):
         self._communication_lock = asyncio.Lock()
         self._config: dict = {}
         self._ignore_errors = False
-        self._check_reader = True
         self._echo_enabled = False
 
     # @override
@@ -191,7 +190,10 @@ class ReaderAT(RfidReader):
             timestamp (float): timestamp
         """
 
-    @abstractmethod
+    ###############################################################################################
+    # Internal methods
+    ###############################################################################################
+
     def _parse_error_response(self, response: str) -> RfidReaderException:
         """analyse the reader error and return the resulting exception
 
@@ -201,10 +203,7 @@ class ReaderAT(RfidReader):
         Returns:
             RfidReaderException: resulting exception
         """
-
-    ###############################################################################################
-    # Internal methods
-    ###############################################################################################
+        return RfidReaderException(response)
 
     # @override
     def _data_received_config(self, data: str, timestamp: float) -> None:
@@ -330,9 +329,9 @@ class ReaderAT(RfidReader):
 
     async def _config_reader(self) -> None:
         info = await self.get_reader_info()
-        # check reader
-        if self._check_reader:
-            expected = getattr(self, "_expected_reader", {})
+        # only check reader if decorator is present
+        expected = getattr(self, "_expected_reader", None)
+        if expected:
             if expected.get('hardware_name', 'unknown').lower() not in info['hardware'].lower():
                 raise RfidReaderException(
                     f"Wrong reader type! {expected.get('hardware_name','unknown')} expected, {info['hardware']} found")

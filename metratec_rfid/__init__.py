@@ -10,7 +10,7 @@ rfid module
 
 __author__ = "Matthias Neumann"
 __license__ = "MIT License"
-__version__ = "1.3.0"
+__version__ = "1.3.1"
 __maintainer__ = "Matthias Neumann"
 __email__ = "neumann@metratec.com"
 
@@ -43,7 +43,7 @@ try:
 except ModuleNotFoundError:
     pass
 
-from .nfc_reader_at import NfcReaderAT  # noqa: F401
+from .nfc_reader_at import NfcReaderAT, NfcMode, NTagMirrorMode  # noqa: F401
 try:
     from .deskid_nfc import DeskIdNfc  # noqa: F401
     from .qr_nfc import QrNfc  # noqa: F401
@@ -56,6 +56,8 @@ from .hf_tag import ISO15Tag  # noqa: F401
 from .hf_tag import ISO14ATag  # noqa: F401
 from .uhf_tag import UhfTag  # noqa: F401
 
-__version_info__ = (1, 1, 0)
+from .utils import detect_readers  # noqa: F401
+
+__version_info__ = (1, 3, 0)
 __version__ = ".".join(str(x) for x in __version_info__)
 __author__ = 'neumann@metratec.com'

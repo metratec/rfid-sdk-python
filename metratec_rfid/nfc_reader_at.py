@@ -13,7 +13,7 @@ from .reader_at import ReaderAT
 # disable 'Too many lines in module' warning - pylint: disable=C0302
 
 
-class Mode(Enum):
+class NfcMode(Enum):
     """The NFC reader operation mode
     """
     AUTO = 1
@@ -49,7 +49,7 @@ class NfcReaderAT(ReaderAT):
 
     def __init__(self, instance: str, connection: Connection) -> None:
         super().__init__(instance, connection)
-        self._mode = Mode.AUTO
+        self._mode = NfcMode.AUTO
         self._selected_tag: str = ""
         self._config: dict = {}
 
@@ -73,12 +73,13 @@ class NfcReaderAT(ReaderAT):
         """
         await self._send_command("AT+CW", 0)
 
-    async def set_mode(self, mode: Mode):
+    async def set_mode(self, mode: NfcMode):
         """Set the readers operation mode.
 
+        Note: Must import the `NfcMode` class from metratec_rfid.
+
         Args:
-            mode (Mode, optional): Mode.ISO15 or Mode.ISO14A.
-                Defaults to Mode.ISO15.
+            mode (NfcMode): NfcMode.AUTO, NfcMode.ISO15 or NfcMode.ISO14A.
 
         Raises:
             RfidReaderException: If a reader error occurs.
@@ -86,15 +87,15 @@ class NfcReaderAT(ReaderAT):
         await self._send_command("AT+MOD", mode.name)
         self._mode = mode
 
-    async def get_mode(self) -> Mode:
+    async def get_mode(self) -> NfcMode:
         """Return the current reader mode.
 
         Returns:
-            Mode: The current operation mode.
+            NfcMode: The current operation mode.
         """
         responses = await self._send_command("AT+MOD?")
         #  +MOD: AUTO
-        mode = Mode[responses[0][6:]]
+        mode = NfcMode[responses[0][6:]]
         self._mode = mode
         return mode
 
@@ -392,7 +393,7 @@ class NfcReaderAT(ReaderAT):
             RfidTransponderException: If the transponder returns an error.
             RfidReaderException: If a reader error occurs.
         """
-        if self._mode is not Mode.ISO15:
+        if self._mode is not NfcMode.ISO15:
             raise RfidReaderException("Only available in ISO15 mode!")
         responses = await self._send_command("AT+RRQ", request)
         return responses[0][6:]
@@ -407,7 +408,7 @@ class NfcReaderAT(ReaderAT):
             RfidTransponderException: If the transponder returns an error.
             RfidReaderException: If a reader error occurs.
         """
-        if self._mode is not Mode.ISO15:
+        if self._mode is not NfcMode.ISO15:
             raise RfidReaderException("Only available in ISO15 mode!")
         await self._send_command("AT+WRQ", request)
 
@@ -1154,19 +1155,19 @@ class NfcReaderAT(ReaderAT):
                 new_tag = None
                 if not tag_details_enabled:
                     tag_type = self._mode
-                    if tag_type == Mode.AUTO:
+                    if tag_type == NfcMode.AUTO:
                         new_tag = HfTag(info[0], timestamp)
-                    elif tag_type == Mode.ISO15:
+                    elif tag_type == NfcMode.ISO15:
                         new_tag = ISO15Tag(info[0], timestamp)
-                    elif tag_type == Mode.ISO14A:
+                    elif tag_type == NfcMode.ISO14A:
                         new_tag = ISO14ATag(info[0], timestamp)
                 else:
                     tag_type = self._mode
-                    if tag_type == Mode.AUTO:
-                        tag_type = Mode[info.pop(1)]
-                    if tag_type == Mode.ISO15:
+                    if tag_type == NfcMode.AUTO:
+                        tag_type = NfcMode[info.pop(1)]
+                    if tag_type == NfcMode.ISO15:
                         new_tag = ISO15Tag(info[0], timestamp, dsfid=info[1])
-                    elif tag_type == Mode.ISO14A:
+                    elif tag_type == NfcMode.ISO14A:
                         new_tag = ISO14ATag(info[0], timestamp, sak=info[1], atqa=info[2])
                 if new_tag is not None:  # null check
                     inventory.append(new_tag)
