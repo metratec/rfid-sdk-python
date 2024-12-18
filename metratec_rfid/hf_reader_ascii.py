@@ -535,10 +535,13 @@ class HfReaderAscii(ReaderAscii):
             Dict['timestamp', float]: the timestamp
         """
         # disable 'Too many arguments' warning - pylint: disable=R0913
+        # disable 'Too many positional arguments' warning - pylint: disable=R0917
         if tag_id:
+            self._last_request['tid'] = tag_id
             flags = f"{'6' if option_flag else '2'}{'2' if self._config.get('single_sub_carrier', True) else '3'}"\
                 f"{tag_command}{tag_id}{data if data else ''}"
         else:
+            self._last_request['tid'] = ""
             flags = f"{'4' if option_flag else '0'}{'2' if self._config.get('single_sub_carrier', True) else '3'}"\
                 f"{tag_command}{data if data else ''}"
         response = await self._get_last_request(command, flags, "CRC")
@@ -574,6 +577,7 @@ class HfReaderAscii(ReaderAscii):
         tag.set_error_message(error)
         tag.set_data(tag_data)
         self._last_request['response'] = tag
+        self._last_request['timestamp'] = timestamp
         if self._cb_request and tag_data:
             self._cb_request(tag)
 

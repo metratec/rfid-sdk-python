@@ -30,7 +30,7 @@ class SerialConnection(Connection):
 
             byte_size (int, optional): The byte size to use. Defaults to serial.EIGHTBITS.
         """
-        # disable 'Too many arguments' warning - pylint: disable=R0913
+        # disable 'Too many (positional) arguments' warning - pylint: disable=R0913,R0917
         super().__init__()
         self._logger: logging.Logger = logging.getLogger("Input-"+port)
         self._port: str = port

@@ -3,6 +3,16 @@
 Release Notes
 #############
 
+1.3.2
+=====
+
+:Release Date: 2024-11-06
+
+* Fixed read and write requests on legacy readers
+* Added new NFC reader features
+  * HID keyboard mode
+  * NDEF read/write functions
+
 1.3.1
 =====
 

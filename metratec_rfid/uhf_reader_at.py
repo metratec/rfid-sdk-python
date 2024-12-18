@@ -397,6 +397,7 @@ class UhfReaderAT(ReaderAT):
             RfidReaderException: If a reader error occurs.
 
         """
+        # disable 'Too many positional arguments' warning - pylint: disable=R0917
         # change session according to target
         session = "AUTO" if target == "SL" else target
         try:
@@ -512,6 +513,7 @@ class UhfReaderAT(ReaderAT):
         Raises:
             RfidReaderException: If a reader error occurs.
         """
+        # disable 'Too many positional arguments' warning - pylint: disable=R0917
         def bti(value: bool):
             return '1' if value else '0'
 

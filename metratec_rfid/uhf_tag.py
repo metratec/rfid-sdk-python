@@ -15,7 +15,7 @@ class UhfTag(Tag):
             tid: Optional[str] = None, antenna: Optional[int] = None,
             seen_count: int = 1, rssi: Optional[int] = None) -> None:
 
-        # disable 'Too many arguments' warning - pylint: disable=R0913
+        # disable 'Too many (positional) arguments' warning - pylint: disable=R0913,R0917
 
         super().__init__(tid, timestamp)
         self.set_epc(epc)

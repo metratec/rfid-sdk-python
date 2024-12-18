@@ -13,7 +13,7 @@ environment and activate it.
 Afterwards, install Sphinx and other project dependencies with:
 
 ```bash
-pip install -r requirements.txt
+pip install -r ../requirements.txt -r requirements.txt
 ```
 
 Then run

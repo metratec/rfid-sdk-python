@@ -10,7 +10,7 @@ import sys
 
 sys.path.append(os.getcwd())
 # print(sys.path)
-from metratec_rfid.nfc_reader_at import Mode, NfcReaderAT  # noqa -- flake ignore
+from metratec_rfid.nfc_reader_at import NfcMode, NfcReaderAT  # noqa -- flake ignore
 from metratec_rfid.connection.serial_connection import SerialConnection  # noqa -- flake ignore
 from metratec_rfid import RfidReaderException  # noqa -- flake ignore
 
@@ -65,7 +65,7 @@ class TestReader:
 
     async def test_settings(self) -> None:
         mode_org = await self._reader.get_mode()
-        for mode in Mode:
+        for mode in NfcMode:
             await self._reader.set_mode(mode)
             current = await self._reader.get_mode()
             if mode != current:
@@ -150,6 +150,19 @@ class TestReader:
         except RfidReaderException as err:
             print(f"Test request error: {err}")
 
+    async def test_hid_mode(self) -> None:
+        # test HID keyboard layout functions
+        await self._reader.set_hid_layout("FR")
+        print("HID layout:", await self._reader.get_hid_layout())
+        await self._reader.set_hid_layout("EN")
+        print("HID layout:", await self._reader.get_hid_layout())
+        # test HID mode functions
+        #await self._reader.set_hid_mode("MEM", 5, 6)
+        await self._reader.set_hid_mode("UID", 0, 8)
+        print("HID mode:", await self._reader.get_hid_mode())
+        await self._reader.disable_hid_mode()
+        print("HID mode:", await self._reader.get_hid_mode())
+
 
 async def main():
     """ main
@@ -170,12 +183,14 @@ async def main():
         # await test.test_inventory_multi()
 
         # await test.test_tag_detect()
-        await test.test_requests()
+        # await test.test_requests()
         # await test.test_continuous_inventory_multi()
         # await test.check_antenna()
         # await test.test_read_data(2)
         # await test.test_write_data("3034", "3034", 4)
         # await test.test_io()
+
+        await test.test_hid_mode()
     except Exception as err:
         all_ok = False
         logging.getLogger("Main").error("Exception: %s", str(err), exc_info=True)

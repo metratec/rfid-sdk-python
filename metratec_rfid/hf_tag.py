@@ -55,7 +55,7 @@ class ISO15Tag(HfTag):
 
     def __init__(self, tid: str, timestamp: float | None = None, antenna: int | None = None,
                  seen_count: int = 1, dsfid: str | None = None) -> None:
-        # disable 'Too many arguments' warning - pylint: disable=R0913
+        # disable 'Too many (positional) arguments' warning - pylint: disable=R0913,R0917
         super().__init__(tid, timestamp, antenna, seen_count)
         self.set_type("ISO15")
         if dsfid:
@@ -86,7 +86,7 @@ class ISO14ATag(HfTag):
     def __init__(self, tid: str, timestamp: float | None = None, antenna: int | None = None,
                  seen_count: int = 1, sak: str | None = None, atqa: str | None = None,
                  tag_type: str | None = None) -> None:
-        # disable 'Too many arguments' warning - pylint: disable=R0913
+        # disable 'Too many (positional) arguments' warning - pylint: disable=R0913,R0917
         super().__init__(tid, timestamp, antenna, seen_count)
         self.set_type(tag_type if tag_type else "ISO14A")
         if sak:
@@ -134,7 +134,7 @@ class HfTagInfo(HfTag):
 
     def __init__(self, tid: str, tag_info: Optional[str], error_message: Optional[str],
                  timestamp: Optional[float] = None, antenna: Optional[int] = None, seen_count: int = 1) -> None:
-        # disable 'Too many arguments' warning - pylint: disable=R0913
+        # disable 'Too many (positional) arguments' warning - pylint: disable=R0913,R0917
         super().__init__(tid, timestamp, antenna, seen_count)
         if error_message:
             self.set_error_message(error_message)
@@ -225,35 +225,3 @@ class HfTagInfo(HfTag):
             int: The IC reference.
         """
         return self.get('icr', None)
-
-
-class HfTagMemory(dict):
-    """Tag Memory information
-    """
-
-    def __init__(self, sectors: int, number_of_blocks: int, block_size: int) -> None:
-        dict.__init__(self)
-        self['sectors'] = sectors
-        self['number_of_blocks'] = number_of_blocks
-        self['block_size'] = block_size
-
-    def get_sectors(self) -> int:
-        """
-        Returns:
-            int: adjacent same-sized sectors
-        """
-        return self['sectors']
-
-    def get_number_of_blocks(self) -> int:
-        """
-        Returns:
-            int: the number of blocks
-        """
-        return self['number_of_blocks']
-
-    def get_block_size(self) -> int:
-        """
-        Returns:
-            int: the tag block size
-        """
-        return self['block_size']

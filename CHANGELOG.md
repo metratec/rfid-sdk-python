@@ -1,5 +1,12 @@
 # Release Notes
 
+## 1.3.2
+
+* Fixed read and write requests on legacy readers
+* Added new NFC reader features
+  * HID keyboard mode
+  * NDEF read/write functions
+
 ## 1.3.1
 
 * Reserved memory (RES) usable for read, write and (un)lock

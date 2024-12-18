@@ -233,8 +233,9 @@ class ReaderAT(RfidReader):
             # check if it is an event
             if msg[1] == 'C':  # +CINV +CINVR
                 # continuous inventory event
-                self._handle_inventory_events(msg, timestamp)
-                return
+                if msg[2] == 'I':  # +CINV +CINVR
+                    self._handle_inventory_events(msg, timestamp)
+                    return
             if msg[1] == 'H' and len(msg) == 4:  # +HBT
                 # Heartbeat - ignore
                 return
