@@ -439,20 +439,26 @@ class HfReaderAscii(ReaderAscii):
         if data[0] == 'T':
             if data[1] == 'D' or data[1] == 'N':  # TDT TND
                 self._parse_request(data)
+                if self._custom_command:
+                    self._add_data_to_receive_buffer(data)
                 return
         if data[0] == 'I':
             if data[1] == 'V':  # IVF
                 self._parse_inventory(data)
+                if self._custom_command:
+                    self._add_data_to_receive_buffer(data)
                 return
         if data[0] == 'R' and data[2] == 'W':  # RNW Registers Not Written
             self._rfi_enabled = False
             return
         if data[0] == 'S':
             if data.startswith("SRT"):
-                # TODO Reader reset
+                asyncio.ensure_future(self.reset())
                 return
         if len(data) >= 10 and data[-6:-3] == 'IVF':
             self._parse_inventory(data)
+            if self._custom_command:
+                self._add_data_to_receive_buffer(data)
             return
         self._add_data_to_receive_buffer(data)
 
@@ -573,7 +579,7 @@ class HfReaderAscii(ReaderAscii):
             # TNR - Tag not responding - no tag
             # RDL - read data too long
             error = split[last_element]
-        tag = HfTag(self._last_request['tid'], timestamp, antenna)
+        tag = HfTag(self._last_request.get('tid', ""), timestamp, antenna)
         tag.set_error_message(error)
         tag.set_data(tag_data)
         self._last_request['response'] = tag

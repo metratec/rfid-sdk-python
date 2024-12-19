@@ -809,6 +809,8 @@ class UhfReaderAscii(ReaderAscii):
                 return
             if data[1] == 'V':  # IVF
                 self._parse_inventory(data)
+                if self._custom_command:
+                    self._add_data_to_receive_buffer(data)
                 return
         if data[0] == 'S':
             if data.startswith("SRT"):
@@ -816,6 +818,8 @@ class UhfReaderAscii(ReaderAscii):
                 return
         if len(data) > 10 and data[-7:-4] == 'IVF':
             self._parse_inventory(data)
+            if self._custom_command:
+                self._add_data_to_receive_buffer(data)
             return
         self._add_data_to_receive_buffer(data)
 

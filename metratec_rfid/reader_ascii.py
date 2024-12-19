@@ -22,6 +22,7 @@ class ReaderAscii(RfidReader):
         self._connection.set_separator("\r")
         self._communication_lock = asyncio.Lock()
         self._config: dict = {}
+        self._custom_command = True
 
     async def send_custom_command(self, command: str) -> List[str]:
         """Send an arbitrary ASCII command to the reader and return the response.
@@ -36,8 +37,12 @@ class ReaderAscii(RfidReader):
             List[str]: The reader responses.
             In case of a set command the list will be empty.
         """
-        response = await self._send_recv_command(command=command)
-        return response.split('\r')
+        try:
+            self._custom_command = True
+            response = await self._send_recv_command(command=command)
+            return response.split('\r')
+        finally:
+            self._custom_command = False
 
     # @override
     async def connect(self, timeout: float = 5.0, port_re: str = "USB") -> None:
