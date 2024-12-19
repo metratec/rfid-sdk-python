@@ -1,5 +1,9 @@
 # Release Notes
 
+## 1.3.4
+
+* Fixed the send_custom_commands method on legacy readers
+
 ## 1.3.3
 
 * Fixed the send_custom_commands method on legacy readers

@@ -3,6 +3,13 @@
 Release Notes
 #############
 
+1.3.4
+=====
+
+:Release Date: 2024-12-19
+
+* Fixed the send_custom_commands method on legacy readers
+
 1.3.3
 =====
 

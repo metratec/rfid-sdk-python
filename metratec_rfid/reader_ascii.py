@@ -22,7 +22,7 @@ class ReaderAscii(RfidReader):
         self._connection.set_separator("\r")
         self._communication_lock = asyncio.Lock()
         self._config: dict = {}
-        self._custom_command = True
+        self._custom_command = False
 
     async def send_custom_command(self, command: str) -> List[str]:
         """Send an arbitrary ASCII command to the reader and return the response.
