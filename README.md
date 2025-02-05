@@ -9,16 +9,6 @@ library. Simply open the `index.html` file to view it.
 
 ## Installation
 
-### Requirements
-
-It is assumed that Python 3 is already installed on the system, including the package installer *pip*.
-
-In case of installation issues, consider upgrading the build tools to the latest version:
-
-```
-pip install -U pip setuptools
-```
-
 ### Create virtual environment
 
 To use the library without installing it into your global Python packages, it is recommended to use a virtual environment.
@@ -40,7 +30,7 @@ To use the library without installing it into your global Python packages, it is
 The library is packaged into an archive and can be installed via pip:
 
 ```
-python -m pip install metratec_rfid-1.3.3.tar.gz
+python3 -m pip git+https://github.com/metratec/rfid-sdk-python
 ```
 
 ## Usage
@@ -73,6 +63,7 @@ See the code examples for complete sample applications and reference the documen
 The `examples` folder contains sample applications using this library.
 
 #### Minimal example
+
 To get started right away, identify the proper reader class for your device and run the following example. The given arguments are examples and have to be adapted. The first argument must match the reader class name and the second argument specifies the connection port.
 
 ```

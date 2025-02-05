@@ -10,16 +10,17 @@ After connection it fetches the current inventory from the reader and prints it 
 import asyncio
 from typing import List
 
-from metratec_rfid import DeskIdUhfv2
-from metratec_rfid import UhfTag
+from metratec_rfid import DeskIdNfc
+from metratec_rfid.hf_tag import HfTag
 from metratec_rfid import RfidReaderException
+from metratec_rfid.nfc_reader_at import NfcMode
 
 
 async def main():
     """_summary_
     """
     # Create an instance and define the serial connection
-    reader = DeskIdUhfv2(instance="Reader", serial_port="/dev/ttyACM0")
+    reader = DeskIdNfc(instance="Reader", serial_port="/dev/ttyACM0")
     # set a callback for the reader status
     reader.set_cb_status(lambda status: print(f"status changed: {status}"))
     # set a callback for the inventories
@@ -28,15 +29,22 @@ async def main():
     # connect the reader
     try:
         await reader.connect()
-        # set the reader power
-        await reader.set_power(4)
+        # per default the reader can read ISO15 and ISO14A transponder
+        # if you not know with type of transponder you have, you can call the detect_tag_types() method
+        inventory: List[HfTag] = await reader.detect_tag_types()
+        # print inventory with transponder type
+        print(f'Transponder found: {len(inventory)}')
+        for tag in inventory:
+            print(f'{tag.get_type()} - {tag.get_id()}')
 
-        # get the inventory
-        inventory: List[UhfTag] = await reader.get_inventory()
+        # then you can set the mode reader in the mode you need
+        await reader.set_mode(NfcMode.ISO14A)
+        # call the inventory
+        inventory: List[HfTag] = await reader.get_inventory()
         # print inventory
         print(f'Transponder found: {len(inventory)}')
         for tag in inventory:
-            print(f'{tag.get_epc()}')
+            print(f'{tag.get_id()}')
 
     except Exception as err:
         print(f"Reader exception: {err}")
