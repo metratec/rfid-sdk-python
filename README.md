@@ -4,10 +4,19 @@ An Asyncio based library to control Metratec RFID readers with Python 3.
 
 ## Documentation
 
-The folder `metratec_rfid-doc` contains the HTML documentation of the
-library. Simply open the `index.html` file to view it.
+Refer to the `docs` folder for building the API documentation for the `metratec_rfid` library.
 
 ## Installation
+
+### Requirements
+
+It is assumed that Python 3 is already installed on the system, including the package installer *pip*.
+
+In case of installation issues, consider upgrading the build tools to the latest version:
+
+```
+pip install -U pip setuptools
+```
 
 ### Create virtual environment
 
@@ -27,10 +36,29 @@ To use the library without installing it into your global Python packages, it is
 
 ### Install RFID SDK
 
-The library is packaged into an archive and can be installed via pip:
+Clone the repository and change into its directory: 
 
 ```
-python3 -m pip git+https://github.com/metratec/rfid-sdk-python
+git clone https://github.com/metratec/rfid-sdk-python.git
+cd rfid-sdk-python
+```
+
+Preferably check out a release version (see [Github tags](https://github.com/metratec/rfid-sdk-python/tags)), for example: 
+
+```
+git checkout r1.3.2
+```
+
+Install the *metratec_rfid* library: 
+
+```
+python -m pip install .
+```
+
+Alternatively, install a specific version from Github directly:
+
+```
+python -m pip install git+https://github.com/metratec/rfid-sdk-python@r1.3.2
 ```
 
 ## Usage
@@ -63,7 +91,6 @@ See the code examples for complete sample applications and reference the documen
 The `examples` folder contains sample applications using this library.
 
 #### Minimal example
-
 To get started right away, identify the proper reader class for your device and run the following example. The given arguments are examples and have to be adapted. The first argument must match the reader class name and the second argument specifies the connection port.
 
 ```
