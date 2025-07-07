@@ -3,6 +3,13 @@
 Release Notes
 #############
 
+1.4.1
+=====
+
+:Release Date: 2025-07-07
+
+* parsing continuous multiple inventory bug fixed
+
 1.4.0
 =====
 

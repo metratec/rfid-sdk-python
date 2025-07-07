@@ -1,5 +1,9 @@
 # Release Notes
 
+## 1.4.1
+
+* parsing continuous multiple inventory bug fixed
+
 ## 1.4.0
 
 * Adds a method for miscellaneous settings to the UHF readers
