@@ -60,13 +60,13 @@ class DeskIdUhfv2Base(UhfReaderAT, ReaderATSound):
         await super().set_power(power)
 
 
-@ExpectedReaderInfo("DeskID_UHF_v2_E", "DeskID_UHF_v2_E", 1.0)
+@ExpectedReaderInfo("DeskID_UHF_v2_E", "DeskID_UHF_v2_E", 1.5)
 class DeskIdUhfv2(DeskIdUhfv2Base):
     """Metratec DeskID UHF v2 (ETSI) class
     """
 
 
-@ExpectedReaderInfo("DeskID_UHF_v2_F", "DeskID_UHF_v2_F", 1.0)
+@ExpectedReaderInfo("DeskID_UHF_v2_F", "DeskID_UHF_v2_F", 1.6)
 class DeskIdUhfv2FCC(DeskIdUhfv2Base):
     """Metratec DeskID UHF v2 (FCC) class
     """

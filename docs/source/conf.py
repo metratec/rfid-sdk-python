@@ -13,7 +13,7 @@ sys.path.append(os.path.abspath('../..'))
 project = 'Metratec RFID'
 copyright = '2023, Metratec GmbH'
 author = 'www.metratec.com'
-release = '1.3.2'
+release = '1.3.5'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

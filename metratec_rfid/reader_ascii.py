@@ -169,10 +169,10 @@ class ReaderAscii(RfidReader):
         if expected:
             if expected.get('hardware_name', 'unknown').lower() not in info['hardware'].lower():
                 raise RfidReaderException(
-                    f"Wrong reader type! {expected.get('hardware_name','unknown')} expected, {info['hardware']} found")
+                    f"Wrong reader type! {expected.get('hardware_name', 'unknown')} expected, {info['hardware']} found")
             if expected.get('firmware_name', 'unknown').lower() not in info['firmware'].lower():
-                raise RfidReaderException(f"Wrong reader firmware! {expected.get('firmware_name','unknown')} expected" +
-                                          f", {info['firmware']} found")
+                raise RfidReaderException(f"Wrong reader firmware! {expected.get('firmware_name', 'unknown')}" +
+                                          f"expected, {info['firmware']} found")
             firmware_version = float(f"{info['firmware_version'][0:2]}.{info['firmware_version'][2:4]}")
             if firmware_version < expected.get('min_firmware', 1.0):
                 raise RfidReaderException("Reader firmware version too low, please update! " +
@@ -321,11 +321,11 @@ class ReaderAscii(RfidReader):
 
         await self.stop_inventory()
 
-    async def reset(self):
-        """Reset the reader.
-        """
+    # @override
+    async def reset(self, wait: float = 1.0) -> None:
         await self._set_command("RST")
-        await asyncio.sleep(0.1)
+        await self.disconnect()
+        await asyncio.sleep(wait)
         await self.connect()
 
     async def set_heartbeat(self, interval: int) -> None:

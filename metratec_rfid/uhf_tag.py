@@ -18,6 +18,8 @@ class UhfTag(Tag):
         # disable 'Too many (positional) arguments' warning - pylint: disable=R0913,R0917
 
         super().__init__(tid, timestamp)
+        self.set_inventory_epc(epc)
+        # For backwards compatibility:
         self.set_epc(epc)
         if rssi:
             self.set_rssi(rssi)
@@ -34,6 +36,24 @@ class UhfTag(Tag):
         """
         identifier: Optional[str] = self.get_epc()
         return identifier if identifier else "unknown"
+
+    def get_inventory_epc(self) -> Optional[str]:
+        """Return the EPC value of this tag,
+        reported by the inventory.
+
+        Returns:
+            str: The EPC value.
+        """
+        return self.get('inventory_epc')
+
+    def set_inventory_epc(self, epc: str) -> None:
+        """Set the EPC value of this tag,
+        reported by the inventory.
+
+        Args:
+            epc (str): The EPC value to set.
+        """
+        self.set_value('inventory_epc', epc)
 
     def get_epc(self) -> Optional[str]:
         """Return the EPC value of this tag.

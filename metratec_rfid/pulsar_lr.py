@@ -1,8 +1,8 @@
 """Metratec Pulsar LR UHF reader
 """
 
-from ipaddress import ip_address
-
+import platform
+import re
 from .reader import ExpectedReaderInfo
 from .reader_at import ReaderATIO
 from .connection.socket_connection import SocketConnection
@@ -30,14 +30,17 @@ class PulsarLRBase(UhfReaderATMulti, ReaderATIO):
 
         """
         try:
-            # this will raise ValueError if IP address is invalid
-            ip_address(address)
-            super().__init__(instance, SocketConnection(address, port))
+            os = platform.system().lower()
+            if (os in ("linux", "darwin") and address.strip().startswith("/") or
+                    (os == "windows" and re.compile("com[0-9]+").match(address.lower()))):
+                super().__init__(instance, SerialConnection(address))
+            else:
+                super().__init__(instance, SocketConnection(address, port))
         except ValueError:
             super().__init__(instance, SerialConnection(address))
 
 
-@ExpectedReaderInfo("PULSAR_LR", "PULSAR_LR", 01.04)
+@ExpectedReaderInfo("PULSAR_LR", "PULSAR_LR", 01.06)
 class PulsarLR(PulsarLRBase):
     """Metratec Pulsar LR class
     """

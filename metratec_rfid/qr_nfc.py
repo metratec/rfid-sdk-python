@@ -6,7 +6,7 @@ from .reader import ExpectedReaderInfo
 from .connection.serial_connection import SerialConnection
 
 
-@ExpectedReaderInfo("QR_NFC", "QR_NFC", 1.0)
+@ExpectedReaderInfo("QR_NFC", "QR_NFC", 1.3)
 class QrNfc(NfcReaderAT):
     """Metratec QR NFC class
     """

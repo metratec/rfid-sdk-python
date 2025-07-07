@@ -1,5 +1,7 @@
 """
 metratec uhf reader gen2
+
+version 1.3.5
 """
 
 from time import time
@@ -238,6 +240,86 @@ class UhfReaderAT(ReaderAT):
             raise RfidReaderException(
                 f"Not expected response for command AT+Q? - {response}") from exc
 
+    async def get_misc_settings(self) -> Dict[str, Any]:
+        """Get the current reader miscellaneous settings.
+        Note: Please only change this values if you know what you're doing.
+
+        Raises:
+            RfidReaderException: If a reader error occurs.
+
+        Returns:
+            Dict[str, Any]: Inventory settings with keys 'abort_on_fail', 'remain_on',
+            'verbose', 'min_q_cycles', 'phase', 'max_queries_since_valid_epc',
+            'tid_query_length', 'standby_timeout' and 'sjc_step_size'.
+        """
+        try:
+            responses: List[str] = await self._send_command("AT+IST?")
+            misc: Dict[str, Any] = {}
+            for resp in responses:
+                split = resp[5:].split(",")
+                key, value = split[0].replace('"', ''), split[1].replace('"', '')
+                if value == 'true':
+                    misc[key] = True
+                elif value == 'false':
+                    misc[key] = False
+                elif value.isdigit():
+                    misc[key] = int(value)
+                else:
+                    misc[key] = value
+            return misc
+        except IndexError as exc:
+            raise RfidReaderException(
+                f"Not expected response for command AT+IST? - {responses}") from exc
+
+    async def set_misc_settings(self, abort_on_fail: Optional[bool] = None,
+                                remain_on: Optional[bool] = None,
+                                verbose: Optional[bool] = None,
+                                min_q_cycles: Optional[int] = None,
+                                max_queries_since_valid_epc: Optional[int] = None,
+                                tid_query_length: Optional[int] = None,
+                                standby_timeout: Optional[int] = None,
+                                sjc_step_size: Optional[int] = None,
+                                misc: Optional[Dict[str, Any]] = None) -> None:
+
+        """Set the reader miscellaneous settings.
+        Note: Please only change this values if you know what you're doing.
+
+        Args:
+            about_on_fail (bool): If True, the reader will abort on fail, default is False.
+            remain_on (bool): If True, the reader will remain on, default is False.
+            verbose (bool): If True, the reader sends more information, default is False.
+            min_q_cycles (int): The minimum Q cycles, default is 1.
+            max_queries_since_valid_epc (int): The maximum number of queries since valid EPC, default is 16.
+            tid_query_length (int): The TID query length, default is 4.
+            standby_timeout (int): The standby timeout, default is 50.
+            sjc_step_size (int): The SJC step size, default is 8.
+            misc (Dict[str, Any]): Instead of setting the parameter separately, you can pass a dictionary with keys
+                'abort_on_fail', 'remain_on', 'verbose', 'min_q_cycles', 'max_queries_since_valid_epc',
+                'tid_query_length', 'standby_timeout' and 'sjc_step_size'.
+        Raises:
+            RfidReaderException: If a reader error occurs.
+        """
+        # pylint: disable=too-many-positional-arguments
+        if misc is not None and isinstance(misc, dict):
+            for key, value in misc.items():
+                await self._send_command(f"AT+IST={key},{value}")
+        if abort_on_fail is not None:
+            await self._send_command(f"AT+IST=abort_on_fail,{abort_on_fail}")
+        if remain_on is not None:
+            await self._send_command(f"AT+IST=remain_on,{remain_on}")
+        if verbose is not None:
+            await self._send_command(f"AT+IST=verbose,{verbose}")
+        if min_q_cycles is not None:
+            await self._send_command(f"AT+IST=min_q_cycles,{min_q_cycles}")
+        if max_queries_since_valid_epc is not None:
+            await self._send_command(f"AT+IST=max_queries_since_valid_epc,{max_queries_since_valid_epc}")
+        if tid_query_length is not None:
+            await self._send_command(f"AT+IST=tid_query_length,{tid_query_length}")
+        if standby_timeout is not None:
+            await self._send_command(f"AT+IST=standby_timeout,{standby_timeout}")
+        if sjc_step_size is not None:
+            await self._send_command(f"AT+IST=sjc_step_size,{sjc_step_size}")
+
     async def set_mask(self, mask: str, start: int = 0, memory: str = "EPC", bit_length: int = 0) -> None:
         """Set a mask for all inventory operations.
 
@@ -337,7 +419,7 @@ class UhfReaderAT(ReaderAT):
 
     async def send_select(self, mask: str, action: int, start: int = 0,
                           memory: str = "EPC", bit_length: int = 0,
-                          target: str | int = "SL") -> None:
+                          target: Union[str, int] = "SL") -> None:
         """Modify a tags selected flag or inventoried state directly.
 
         Depending on the action parameter, the tags will modify their
@@ -479,6 +561,8 @@ class UhfReaderAT(ReaderAT):
                 config['select'] = data[5]
             if len(data) >= 7:
                 config['target'] = data[6]
+            if len(data) >= 8:
+                config['rssi_threshold'] = data[7]
             return config
         except IndexError as exc:
             raise RfidReaderException(
@@ -487,7 +571,7 @@ class UhfReaderAT(ReaderAT):
     async def set_inventory_settings(self, only_new_tag: Optional[bool] = None, with_rssi: Optional[bool] = None,
                                      with_tid: Optional[bool] = None, fast_start: Optional[bool] = None,
                                      phase: Optional[bool] = None, select: Optional[str] = None,
-                                     target: Optional[str] = None) -> None:
+                                     target: Optional[str] = None, rssi_threshold: Optional[int] = None) -> None:
         """Configure the inventory response.
 
         Args:
@@ -510,10 +594,14 @@ class UhfReaderAT(ReaderAT):
             target (str, optional): Used to set which tags should respond.
                 Tags with inventoried state 'A' or 'B'.
 
+            rssi_threshold (int, optional): The RSSI threshold for tags. Only tags with an RSSI greater
+                than or equal to rssi_threshold are reported.
+
         Raises:
             RfidReaderException: If a reader error occurs.
         """
         # disable 'Too many positional arguments' warning - pylint: disable=R0917
+        # disable 'Too many branches' warning - pylint: disable=R0912
         def bti(value: bool):
             return '1' if value else '0'
 
@@ -532,21 +620,28 @@ class UhfReaderAT(ReaderAT):
             parameters.append(select if select is not None else config['select'])
         if config_size >= 7:
             parameters.append(target if target is not None else config['target'])
+        if config_size >= 8:
+            parameters.append(rssi_threshold if rssi_threshold is not None else config['rssi_threshold'])
 
         await self._send_command("AT+INVS", *parameters)
 
         # update configuration
-        config['only_new_tag'] = only_new_tag
-        config['with_rssi'] = with_rssi
-        config['with_tid'] = with_tid
-        if config_size >= 4:
+        if only_new_tag is not None:
+            config['only_new_tag'] = only_new_tag
+        if with_rssi is not None:
+            config['with_rssi'] = with_rssi
+        if with_tid is not None:
+            config['with_tid'] = with_tid
+        if config_size >= 4 and fast_start is not None:
             config['fast_start'] = fast_start
-        if config_size >= 5:
+        if config_size >= 5 and phase is not None:
             config['phase'] = phase
-        if config_size >= 6:
+        if config_size >= 6 and select is not None:
             config['select'] = select
-        if config_size >= 7:
+        if config_size >= 7 and target is not None:
             config['target'] = target
+        if config_size >= 8 and rssi_threshold is not None:
+            config['rssi_threshold'] = rssi_threshold
 
     # @override
     async def get_inventory(self) -> List[UhfTag]:

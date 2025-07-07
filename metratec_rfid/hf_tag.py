@@ -1,6 +1,6 @@
 """HF Transponder defines
 """
-from typing import Optional
+from typing import cast, Optional
 
 from .tag import Tag
 
@@ -53,8 +53,8 @@ class ISO15Tag(HfTag):
     ISO15 Transponder class
     """
 
-    def __init__(self, tid: str, timestamp: float | None = None, antenna: int | None = None,
-                 seen_count: int = 1, dsfid: str | None = None) -> None:
+    def __init__(self, tid: str, timestamp: Optional[float] = None, antenna: Optional[int] = None,
+                 seen_count: int = 1, dsfid: Optional[str] = None) -> None:
         # disable 'Too many (positional) arguments' warning - pylint: disable=R0913,R0917
         super().__init__(tid, timestamp, antenna, seen_count)
         self.set_type("ISO15")
@@ -83,9 +83,9 @@ class ISO14ATag(HfTag):
     ISO14A Transponder class
     """
 
-    def __init__(self, tid: str, timestamp: float | None = None, antenna: int | None = None,
-                 seen_count: int = 1, sak: str | None = None, atqa: str | None = None,
-                 tag_type: str | None = None) -> None:
+    def __init__(self, tid: str, timestamp: Optional[float] = None, antenna: Optional[int] = None,
+                 seen_count: int = 1, sak: Optional[str] = None, atqa: Optional[str] = None,
+                 tag_type: Optional[str] = None) -> None:
         # disable 'Too many (positional) arguments' warning - pylint: disable=R0913,R0917
         super().__init__(tid, timestamp, antenna, seen_count)
         self.set_type(tag_type if tag_type else "ISO14A")
@@ -162,13 +162,13 @@ class HfTagInfo(HfTag):
         """
         return self.get('is_dsfid', False)
 
-    def get_dsfid(self) -> int:
+    def get_dsfid(self) -> Optional[int]:
         """Return the Data Storage Format Identifier (DSFID) if present.
 
         Returns:
             int: The DSFID of this transponder.
         """
-        return self.get('dsfid', None)
+        return cast(Optional[int], self.get('dsfid', None))
 
     def is_afi(self) -> bool:
         """Return whether the AFI field is supported by this transponder.
@@ -178,13 +178,13 @@ class HfTagInfo(HfTag):
         """
         return self.get('is_afi', False)
 
-    def get_afi(self) -> int:
+    def get_afi(self) -> Optional[int]:
         """Returns the Application Family Identifier (AFI) if present.
 
         Returns:
             int: The AFI of this transponder.
         """
-        return self.get('afi', None)
+        return cast(Optional[int], self.get('afi', None))
 
     def is_vicc(self) -> bool:
         """Return if the VICC memory information is supported by this transponder.
@@ -194,13 +194,13 @@ class HfTagInfo(HfTag):
         """
         return self.get('is_vicc', False)
 
-    def get_vicc_number_of_block(self) -> int:
+    def get_vicc_number_of_block(self) -> Optional[int]:
         """Return the number of available memory blocks for this transponder.
 
         Returns:
             int: The number of memory blocks.
         """
-        return self.get('vicc_number_of_block', None)
+        return cast(Optional[int], self.get('vicc_number_of_block', None))
 
     def get_vicc_block_size(self) -> int:
         """Returns the memory block size of this transponder.
@@ -218,10 +218,10 @@ class HfTagInfo(HfTag):
         """
         return self.get('is_icr', False)
 
-    def get_icr(self) -> int:
+    def get_icr(self) -> Optional[int]:
         """Returns the IC reference for this transponder.
 
         Returns:
             int: The IC reference.
         """
-        return self.get('icr', None)
+        return cast(Optional[int], self.get('icr', None))

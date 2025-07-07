@@ -37,13 +37,13 @@ class QRG2Base(UhfReaderAT):
         await super().set_power(power)
 
 
-@ExpectedReaderInfo("QRG2_ETSI", "QRG2_ETSI", 1.0)
+@ExpectedReaderInfo("QRG2_ETSI", "QRG2_ETSI", 1.10)
 class QRG2(QRG2Base):
     """Metratec QRG2 (ETSI) class
     """
 
 
-@ExpectedReaderInfo("QRG2_FCC", "QRG2_FCC", 1.0)
+@ExpectedReaderInfo("QRG2_FCC", "QRG2_FCC", 1.9)
 class QRG2FCC(QRG2Base):
     """Metratec QRG2 (FCC) class
     """

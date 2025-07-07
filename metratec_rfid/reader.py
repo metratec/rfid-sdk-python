@@ -294,6 +294,17 @@ class RfidReader(BaseClass):
     ###############################################################################################
 
     @abstractmethod
+    async def reset(self, wait: float = 1.0) -> None:
+        """Resets the reader.
+
+        Args:
+            wait (float, optional): Time to wait for reconnect. Defaults to 1.0.
+
+        Raises:
+            RfidReaderException: If a reader error occurs.
+        """
+
+    @abstractmethod
     async def send_custom_command(self, command: str) -> List[str]:
         """Send a command to the reader and return the response
 

@@ -2,13 +2,13 @@
 """
 
 from metratec_rfid.nfc_reader_at import NfcReaderAT
-from metratec_rfid.reader_at import ReaderATSound
+from metratec_rfid.reader_at import ReaderATHID, ReaderATSound
 from .reader import ExpectedReaderInfo
 from .connection.serial_connection import SerialConnection
 
 
-@ExpectedReaderInfo("DeskID_NFC", "DeskID_NFC", 1.0)
-class DeskIdNfc(NfcReaderAT, ReaderATSound):
+@ExpectedReaderInfo("DeskID_NFC", "DeskID_NFC", 2.4)
+class DeskIdNfc(NfcReaderAT, ReaderATSound, ReaderATHID):
     """Metratec DeskID NFC class
     """
 

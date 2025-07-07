@@ -1,9 +1,8 @@
 """ metratec nfc reader second generation
 """
 
-import asyncio
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Union
 from time import time
 from .connection.connection import Connection
 from .hf_tag import HfTag, ISO14ATag, ISO15Tag
@@ -534,7 +533,8 @@ class NfcReaderAT(ReaderAT):
     # Mifare Classic Commands
     ###################################################################################################################
 
-    async def authenticate_mifare_classic_block(self, block: int, key: str | int = "", key_type: str = "") -> None:
+    async def authenticate_mifare_classic_block(self, block: int, key: Union[str, int] = "",
+                                                key_type: str = "") -> None:
         """Authenticate command for Mifare classic cards to access memory blocks.
 
         Prior to this command, the card has to be selected.
@@ -1095,123 +1095,6 @@ class NfcReaderAT(ReaderAT):
                 return
             raise err
 
-    # HID Mode
-    ###################################################################################################################
-
-    async def disable_hid_mode(self) -> None:
-        """Disable the readers HID mode.
-
-        Note: This function will reboot the reader.
-
-        Raises:
-            RfidReaderException: If a reader error occurs.
-        """
-        await self._send_command("AT+HID", "OFF")
-        await self._reconnect(3)
-
-    async def set_hid_mode(self, mode: str, start: int, length: int,
-                           eol: Optional[str] = None, oof: int = 5000) -> None:
-        """Enable and configure the readers HID mode.
-
-        NFC readers with a native USB support a HID mode where the Tag UID
-        or memory content is outputted as keyboard keystrokes.
-
-        Use the `disable_hid_mode()` function to disable HID mode.
-
-        Note: This function will reboot the reader.
-
-        Args:
-            mode (str): Whether to use the tags UID (`"UID"`) or memory
-                data (`"MEM"`) to determine the keystrokes.
-
-            start (int): In UID mode the start byte of the UID.
-                In MEM mode the memory block to use.
-
-            length (int): The maximum number of bytes to print from the
-                UID or block.
-
-            eol (str, optional): This character will be appended to each
-                output. Must be one of `["NONE", "RETURN", "TAB"]`.
-
-            oof (int, optional): A tag needs to be out of field for at
-                least this many milliseconds before it is outputted again.
-
-        Raises:
-            RfidReaderException: If a reader error occurs.
-        """
-        # disable 'Too many (positional) arguments' warning - pylint: disable=R0913,R0917
-        # check mode argument
-        mode_arg = str(mode).upper()
-        mode_allowed = ["UID", "MEM"]
-        if mode_arg not in mode_allowed:
-            raise RfidReaderException(f"Mode argument must be one of {mode_allowed}")
-
-        # check eol argument
-        eol_arg = str(eol).upper()
-        eol_allowed = ["NONE", "RETURN", "TAB"]
-        if eol_arg not in eol_allowed:
-            raise RfidReaderException(f"EOL argument must be one of {eol_allowed}")
-
-        # send command
-        await self._send_command("AT+HID", mode_arg, start, length, eol_arg, oof)
-
-        # reader will reboot so re-connect after a short delay
-        await self._reconnect(3)
-
-    async def get_hid_mode(self) -> Dict[str, Any]:
-        """Get the current HID mode settings.
-
-        See `set_hit_mode()` for parameter explanation.
-
-        Raises:
-            RfidReaderException: If a reader error occurs.
-
-        Returns:
-            dict: Dictionary with keys 'mode', "start", "length",
-            'eol' and 'oof'.
-        """
-        responses: List[str] = await self._send_command("AT+HID?")
-
-        # +HID: OFF,0,0,NONE,0
-        data: List[str] = responses[0][6:].split(',')
-        try:
-            config: Dict[str, Any] = {
-                "mode": data[0],
-                "start": data[1],
-                "length": data[2],
-                "eol": data[3],
-                "oof": data[4]
-            }
-            return config
-        except IndexError as e:
-            raise RfidReaderException(
-               f"Not expected response for command AT+HID? - {responses}") from e
-
-    async def set_hid_layout(self, layout: str) -> None:
-        """Configure the keyboard layout used for HID mode.
-
-        Args:
-            layout (str): The keyboard layout string, "EN" or "FR".
-
-        Raises:
-            RfidReaderException: If a reader error occurs.
-        """
-        await self._send_command("AT+HIDKBD", layout)
-
-    async def get_hid_layout(self) -> str:
-        """Get the current HID keyboard layout setting.
-
-        Raises:
-            RfidReaderException: If a reader error occurs.
-
-        Returns:
-            str: The keyboard layout string, e.g. "EN" or "FR".
-        """
-        responses: List[str] = await self._send_command("AT+HIDKBD?")
-        # +HIDKBD: EN
-        data: str = responses[0][9:]
-        return data
-
     # NDEF Functions
     ###################################################################################################################
 
@@ -1464,21 +1347,6 @@ class NfcReaderAT(ReaderAT):
         if response in transponder_error:
             return RfidTransponderException(response)
         return RfidReaderException(response)
-
-    async def _reconnect(self, delay_s):
-        """Disconnect the reader and re-connect after specified delay.
-        """
-        # disconnect
-        try:
-            await self.disconnect()
-        except RfidReaderException as e:
-            self.get_logger().error(e)
-
-        # wait for specified period of time
-        await asyncio.sleep(delay_s)
-
-        # re-connect
-        await self.connect()
 
     # @override
     async def _prepare_reader_communication(self) -> None:

@@ -1,5 +1,33 @@
 # Release Notes
 
+## 1.4.0
+
+* Adds a method for miscellaneous settings to the UHF readers
+* Update minimum reader firmware versions
+
+  * DeskID NFC 2.4
+  * DeskID UHF ETSI 1.5
+  * DeskID UHF FCC 1.6
+  * PLRM 1.13
+  * PulsarLR 1.6
+  * QR NFC 1.3
+  * QRG2 ETSI 1.10
+  * QRG2 FCC 1.9
+  * DWARFG2 V2 1.4
+  * DWARFG2 MINI V2 1.5
+  * DwarfG2 XR v2 1.4
+
+* PulsarLR: Fixed connecting via hostname
+* UHF Gen 2: set_inventory_settings() now supports configuring the
+  RSSI threshold.
+* Support the reset() method both for ASCII and AT readers
+* UhfTag.get_inventory_epc() returns the EPC originally reported
+  by the inventory, which may differ from the EPC reported by
+  a read operation.
+* Python 3.9 is the new minimum supported version
+* Fixed repeated calls to UhfReaderAT.set_inventory_settings().
+  If not all settings were passed every time the method could fail.
+
 ## 1.3.4
 
 * Fixed the send_custom_commands method on legacy readers

@@ -27,7 +27,7 @@ class DwarfG2v2Base(UhfReaderATMulti, ReaderATIO):
         self._config["heartbeat"] = 0
 
 
-@ExpectedReaderInfo("DwarfG2_v2", "DWARFG2_V2", 1.0)
+@ExpectedReaderInfo("DwarfG2_v2", "DWARFG2_V2", 1.4)
 class DwarfG2v2(DwarfG2v2Base):
     """Metratec DwarfG2 v2 class
     """
@@ -44,7 +44,7 @@ class DwarfG2v2(DwarfG2v2Base):
         await super().set_power(power)
 
 
-@ExpectedReaderInfo("DwarfG2-Mini_v2", "DWARFG2_MINI_V2", 1.0)
+@ExpectedReaderInfo("DwarfG2-Mini_v2", "DWARFG2_MINI_V2", 1.5)
 class DwarfG2Miniv2(DwarfG2v2Base):
     """Metratec DwarfG2-Mini v2 class
     """
@@ -61,7 +61,7 @@ class DwarfG2Miniv2(DwarfG2v2Base):
         await super().set_power(power)
 
 
-@ExpectedReaderInfo("DwarfG2_XR_v2", "DwarfG2_XR_v2", 1.0)
+@ExpectedReaderInfo("DwarfG2_XR_v2", "DwarfG2_XR_v2", 1.4)
 class DwarfG2XRv2(DwarfG2v2Base):
     """Metratec DwarfG2-XR v2 class
     """

@@ -26,7 +26,7 @@ class PlrmBase(UhfReaderATMulti):
         self._config["heartbeat"] = 0
 
 
-@ExpectedReaderInfo("PLRM", "PLRM", 1.0)
+@ExpectedReaderInfo("PLRM", "PLRM", 1.13)
 class Plrm(PlrmBase):
     """Metratec PLRM class
     """

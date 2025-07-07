@@ -46,7 +46,7 @@ cd rfid-sdk-python
 Preferably check out a release version (see [Github tags](https://github.com/metratec/rfid-sdk-python/tags)), for example: 
 
 ```
-git checkout r1.3.2
+git checkout r1.3.4
 ```
 
 Install the *metratec_rfid* library: 
@@ -58,7 +58,7 @@ python -m pip install .
 Alternatively, install a specific version from Github directly:
 
 ```
-python -m pip install git+https://github.com/metratec/rfid-sdk-python@r1.3.2
+python -m pip install git+https://github.com/metratec/rfid-sdk-python@r1.3.4
 ```
 
 ## Usage

@@ -48,6 +48,13 @@ class ReaderAT(RfidReader):
                 f"Wrong reader - Not expected info response - {response}") from exc
 
     # @override
+    async def reset(self, wait: float = 1.0) -> None:
+        await self._send_command("AT+RST")
+        await self.disconnect()
+        await asyncio.sleep(wait)
+        await self.connect()
+
+    # @override
     async def set_antenna(self, antenna: int) -> None:
         await self._send_command("AT+ANT", antenna)
         self._config['antenna'] = antenna
@@ -335,10 +342,10 @@ class ReaderAT(RfidReader):
         if expected:
             if expected.get('hardware_name', 'unknown').lower() not in info['hardware'].lower():
                 raise RfidReaderException(
-                    f"Wrong reader type! {expected.get('hardware_name','unknown')} expected, {info['hardware']} found")
+                    f"Wrong reader type! {expected.get('hardware_name', 'unknown')} expected, {info['hardware']} found")
             if expected.get('firmware_name', 'unknown').lower() not in info['firmware'].lower():
-                raise RfidReaderException(f"Wrong reader firmware! {expected.get('firmware_name','unknown')} expected" +
-                                          f", {info['firmware']} found")
+                raise RfidReaderException(f"Wrong reader firmware! {expected.get('firmware_name', 'unknown')} " +
+                                          f"expected, {info['firmware']} found")
             firmware_version = float(f"{info['firmware_version'][0:2]}.{info['firmware_version'][2:4]}")
             if firmware_version < expected.get('min_firmware', 1.0):
                 raise RfidReaderException("Reader firmware version too low, please update! " +
@@ -352,6 +359,21 @@ class ReaderAT(RfidReader):
         #     await self.check_antennas()
         # except RfidReaderException as err:
         #     self.get_logger().info("Antenna check: %s", err)
+
+    async def _reconnect(self, delay_s):
+        """Disconnect the reader and re-connect after specified delay.
+        """
+        # disconnect
+        try:
+            await self.disconnect()
+        except RfidReaderException as e:
+            self.get_logger().error(e)
+
+        # wait for specified period of time
+        await asyncio.sleep(delay_s)
+
+        # re-connect
+        await self.connect()
 
 
 class ReaderATSound(ReaderAT):
@@ -640,3 +662,97 @@ class ReaderATIO(ReaderAT):
             connected_multiplexer (List[int]): list with the multiplexer size for each antenna
         """
         await self._send_command("AT+EMX", *connected_multiplexer)
+
+
+class ReaderATHID(ReaderAT):
+    """ReaderAT with HID support"""
+
+    # disable 'not overridden' warning - pylint: disable=abstract-method
+
+    # HID Mode
+    ###################################################################################################################
+
+    async def disable_hid_mode(self) -> None:
+        """Disable the readers HID mode.
+
+        Note: This function will reboot the reader.
+
+        Raises:
+            RfidReaderException: If a reader error occurs.
+        """
+        await self._send_command("AT+HID", "OFF")
+        await self._reconnect(3)
+
+    async def set_hid_mode(self, mode: str, start: int, length: int, eol: str = "NONE",
+                           oof: int = 5000, layout: str = "EN", byte_order: str = "BIG") -> None:
+        """Enable and configure the readers HID mode.
+
+        NFC readers with a native USB support a HID mode where the Tag UID
+        or memory content is outputted as keyboard keystrokes.
+
+        Use the `disable_hid_mode()` function to disable HID mode.
+
+        Note: This function will reboot the reader.
+
+        Args:
+            mode (str): Whether to use the tags UID (`"UID"`) or memory
+                data (`"MEM"`) to determine the keystrokes.
+
+            start (int): In UID mode the start byte of the UID.
+                In MEM mode the memory block to use.
+
+            length (int): The maximum number of bytes to print from the
+                UID or block.
+
+            eol (str, optional): This character will be appended to each
+                output. Must be one of `["NONE", "RETURN", "TAB"]`. Defaults to "NONE".
+
+            oof (int, optional): A tag needs to be out of field for at
+                least this many milliseconds before it is outputted again.
+
+            layout (str, optional): This parameter will change the keystrokes sent by the reader.
+                Available layouts are ["EN", "FR"]. Defaults to "EN".
+
+            byte_order (str, optional): The byte order of the UID output. Available byte orders are ["BIG", "LITTLE"].
+                Defaults to "BIG".
+
+        Raises:
+            RfidReaderException: If a reader error occurs.
+        """
+        # disable 'Too many (positional) arguments' warning - pylint: disable=R0913,R0917
+
+        # send command
+        await self._send_command("AT+HID", mode.upper(), start, length, eol.upper(),
+                                 oof, layout.upper(), byte_order.upper())
+
+        # reader will reboot so re-connect after a short delay
+        await self._reconnect(3)
+
+    async def get_hid_mode(self) -> Dict[str, Any]:
+        """Get the current HID mode settings.
+
+        See `set_hit_mode()` for parameter explanation.
+
+        Raises:
+            RfidReaderException: If a reader error occurs.
+
+        Returns:
+            dict: Dictionary with keys 'mode', "start", "length",
+            'eol' and 'oof'.
+        """
+        responses: List[str] = await self._send_command("AT+HID?")
+
+        # +HID: OFF,0,0,NONE,0
+        data: List[str] = responses[0][6:].split(',')
+        try:
+            config: Dict[str, Any] = {
+                "mode": data[0],
+                "start": data[1],
+                "length": data[2],
+                "eol": data[3],
+                "oof": data[4]
+            }
+            return config
+        except IndexError as e:
+            raise RfidReaderException(
+                f"Not expected response for command AT+HID? - {responses}") from e

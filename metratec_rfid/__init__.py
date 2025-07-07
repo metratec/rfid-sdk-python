@@ -10,7 +10,7 @@ rfid module
 
 __author__ = "Matthias Neumann"
 __license__ = "MIT License"
-__version__ = "1.3.2"
+__version__ = "1.4.0-beta01"
 __maintainer__ = "Matthias Neumann"
 __email__ = "neumann@metratec.com"
 
