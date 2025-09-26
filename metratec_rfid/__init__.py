@@ -8,11 +8,11 @@ rfid module
 # from .connection.serial_connection import SerialConnection
 # from .connection.socket_connection import SocketConnection
 
-__author__ = "Matthias Neumann"
-__license__ = "MIT License"
-__version__ = "1.4.0-beta01"
-__maintainer__ = "Matthias Neumann"
+__version__ = "1.4.2"
 __email__ = "neumann@metratec.com"
+__license__ = "MIT License"
+__author__ = "Matthias Neumann"
+__maintainer__ = "Matthias Neumann"
 
 from .connection import Connection  # noqa: F401
 from .reader_exception import RfidReaderException  # noqa: F401
@@ -57,7 +57,3 @@ from .hf_tag import ISO14ATag  # noqa: F401
 from .uhf_tag import UhfTag  # noqa: F401
 
 from .utils import detect_readers  # noqa: F401
-
-__version_info__ = (1, 3, 0)
-__version__ = ".".join(str(x) for x in __version_info__)
-__author__ = 'neumann@metratec.com'

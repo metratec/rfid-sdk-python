@@ -3,6 +3,15 @@
 Release Notes
 #############
 
+1.4.2
+=====
+
+:Release Date: 2025-09-26
+
+* Fixed incorrect parsing of firmware version
+* Timeout parameter added to the inventory methods
+* Library versioning corrected
+
 1.4.1
 =====
 

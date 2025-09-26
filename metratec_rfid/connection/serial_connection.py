@@ -71,8 +71,7 @@ class SerialConnection(Connection):
         """
         Called if the connection is established
         """
-        if self._cb_connection_made:
-            self._cb_connection_made()
+        self._cb_connection_made()
 
     def connection_lost(self, err: Exception) -> None:
         """
@@ -83,8 +82,7 @@ class SerialConnection(Connection):
             message: str = "connection lost" if self._writer else "disconnected"
         else:
             message = str(err)
-        if self._cb_connection_lost:
-            self._cb_connection_lost(message)
+        self._cb_connection_lost(message)
         self._logger.debug("connection to %s - %s", self._port, message)
         self._writer = None
         self._reader = None
@@ -98,12 +96,11 @@ class SerialConnection(Connection):
         """
         # self.log(logging.DEBUG, "data_received %s", data)
         # disable Catching too general exception Exception - pylint: disable=W0703
-        if self._cb_data_received:
-            try:
-                self._cb_data_received(data)
-            except Exception as err:
-                self._logger.warning(
-                    "Error in data received callback - %s", err, exc_info=True)
+        try:
+            self._cb_data_received(data)
+        except Exception as err:
+            self._logger.warning(
+                "Error in data received callback - %s", err, exc_info=True)
 
     def send(self, data) -> None:
         """
@@ -147,8 +144,7 @@ class SerialConnection(Connection):
                 break
             except (FileNotFoundError, serial.SerialException) as err:
                 # print(err)
-                if self._cb_connection_lost:
-                    self._cb_connection_lost(str(err))
+                self._cb_connection_lost(str(err))
                 retry_count += 1
                 if retry_count <= 10:
                     wait_until: float = self._min_reconnect_wait_time * retry_count

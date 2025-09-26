@@ -131,7 +131,7 @@ class HfReaderAscii(ReaderAscii):
 
     # @override
     async def get_inventory(self, single_slot: bool = False, only_new_tags: bool = False,
-                            afi: Optional[int] = None) -> List[HfTag]:
+                            afi: Optional[int] = None, timeout: float = 2.0) -> List[HfTag]:
         """Get an inventory from the current antenna.
 
         Args:
@@ -158,7 +158,8 @@ class HfReaderAscii(ReaderAscii):
             await self.set_antenna(await self.get_antenna())
         inv: Dict[str, Any] = await self._get_last_inventory("INV", "SSL" if single_slot else None,
                                                              "ONT" if only_new_tags else None,
-                                                             "AFI {afi:02X}" if afi else None)
+                                                             "AFI {afi:02X}" if afi else None,
+                                                             timeout=timeout)
         return inv['transponders']
 
     # @override

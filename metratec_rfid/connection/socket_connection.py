@@ -117,14 +117,12 @@ class SocketConnection(Connection, asyncio.Protocol):
         self._is_connected = True
         self._reconnect_count = 0
         self._transport = transport
-        if self._cb_connection_made:
-            self._cb_connection_made()
+        self._cb_connection_made()
 
     def data_received(self, data) -> None:
         messages: List[bytes] = self._parse_input_data(data)
-        if self._cb_data_received:
-            for message in messages:
-                self._cb_data_received(message[:-1])
+        for message in messages:
+            self._cb_data_received(message[:-1])
 
     def datagram_received(self, data: bytes, addr) -> None:
         """
@@ -134,9 +132,8 @@ class SocketConnection(Connection, asyncio.Protocol):
         """
         # disable unused argument warning - pylint: disable=W0613
         messages: List[bytes] = self._parse_input_data(data)
-        if self._cb_data_received:
-            for message in messages:
-                self._cb_data_received(message[:-1])
+        for message in messages:
+            self._cb_data_received(message[:-1])
 
     def _parse_input_data(self, recv_data: bytes) -> List[bytes]:
         """
@@ -167,8 +164,7 @@ class SocketConnection(Connection, asyncio.Protocol):
         else:
             message = str(exc)
         self._log.debug("connection to %s - %s", self._address, message)
-        if self._cb_connection_lost:
-            self._cb_connection_lost(message)
+        self._cb_connection_lost(message)
         if self._is_connected:
             # reconnect
             self._is_connected = False

@@ -113,7 +113,7 @@ class RfidReader(BaseClass):
             else:
                 port_list = []
                 for p in list_ports.grep(port_re):
-                    port_list.append(p.device)
+                    port_list.append(p.device)  # type:ignore
 
             if len(port_list) == 0:
                 raise RfidReaderException("No connection port set or found automatically")

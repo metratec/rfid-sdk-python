@@ -40,7 +40,7 @@ class PulsarLRBase(UhfReaderATMulti, ReaderATIO):
             super().__init__(instance, SerialConnection(address))
 
 
-@ExpectedReaderInfo("PULSAR_LR", "PULSAR_LR", 01.06)
+@ExpectedReaderInfo("PULSAR_LR", "PULSAR_LR", 1.6)
 class PulsarLR(PulsarLRBase):
     """Metratec Pulsar LR class
     """

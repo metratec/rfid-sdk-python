@@ -644,8 +644,8 @@ class UhfReaderAT(ReaderAT):
             config['rssi_threshold'] = rssi_threshold
 
     # @override
-    async def get_inventory(self) -> List[UhfTag]:
-        responses: List[str] = await self._send_command("AT+INV")
+    async def get_inventory(self, timeout: float = 2.0) -> List[UhfTag]:
+        responses: List[str] = await self._send_command("AT+INV", timeout=timeout)
         inventory: List[UhfTag] = self._parse_inventory(responses, time())
         current_antenna = self._config.get('antenna', 1)
         for tag in inventory:
@@ -1679,14 +1679,14 @@ class UhfReaderATMulti(UhfReaderAT):
         powers[antenna - 1] = power
         await self.set_antenna_powers(powers)
 
-    async def get_inventory_multi(self, ignore_error: bool = False) -> List[UhfTag]:
+    async def get_inventory_multi(self, ignore_error: bool = False, timeout: float = 10.0) -> List[UhfTag]:
         """Get an inventory from multiple antennas.
 
         Antenna ports are chosen according to `set_antenna_multiplex()`.
 
         Args:
-            ignore_error (bool, optional): Set to True to ignore antenna errors.
-                Defaults to False.
+            ignore_error (bool, optional): Set to True to ignore antenna errors. Defaults to False.
+            timeout (float, optional): reader response timeout in seconds. Defaults to 10 seconds.
 
         Raises:
             RfidReaderException: If a reader error occurs.
@@ -1696,7 +1696,7 @@ class UhfReaderATMulti(UhfReaderAT):
         """
 
         self._ignore_errors = ignore_error
-        responses: List[str] = await self._send_command("AT+MINV")
+        responses: List[str] = await self._send_command("AT+MINV", timeout=timeout)
         # parse multiple inventory
         # +MINV: <Antenna Error><CR>
         # +MINV: <ROUND FINISHED, ANT=1><CR>

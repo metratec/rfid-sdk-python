@@ -346,7 +346,7 @@ class ReaderAT(RfidReader):
             if expected.get('firmware_name', 'unknown').lower() not in info['firmware'].lower():
                 raise RfidReaderException(f"Wrong reader firmware! {expected.get('firmware_name', 'unknown')} " +
                                           f"expected, {info['firmware']} found")
-            firmware_version = float(f"{info['firmware_version'][0:2]}.{info['firmware_version'][2:4]}")
+            firmware_version = float(f"{(int)(info['firmware_version'][0:2])}.{(int)(info['firmware_version'][2:4])}")
             if firmware_version < expected.get('min_firmware', 1.0):
                 raise RfidReaderException("Reader firmware version too low, please update! " +
                                           f"Minimum {expected.get('min_firmware')} expected, {firmware_version} found")

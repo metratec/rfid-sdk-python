@@ -162,13 +162,15 @@ class UhfReaderAscii(ReaderAscii):
         await self._set_command("SQV", q_start)
 
     # @override
-    async def get_inventory(self, single_slot: bool = False, only_new_tags: bool = False) -> List[UhfTag]:
+    async def get_inventory(self, single_slot: bool = False, only_new_tags: bool = False,
+                            timeout: float = 2.0) -> List[UhfTag]:
         if self._config['antenna_mode'][0] != "S":
             # Not in single antenna mode ... switch mode
             await self.set_antenna(await self.get_antenna())
         self._inv_called = True
         inv: Dict[str, Any] = await self._get_last_inventory("INV", "SSL" if single_slot else None,
-                                                             "ONT" if only_new_tags else None)
+                                                             "ONT" if only_new_tags else None,
+                                                             timeout=timeout)
         return inv['transponders']
 
     # @override

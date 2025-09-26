@@ -9,9 +9,9 @@ class Connection():
     """
 
     def __init__(self) -> None:
-        self._cb_connection_made: Optional[Callable[[], None]] = None
-        self._cb_connection_lost: Optional[Callable[[str], None]] = None
-        self._cb_data_received: Optional[Callable[[bytes], None]] = None
+        self._cb_connection_made: Callable[[], None] = self._dummy_cb
+        self._cb_connection_lost: Callable[[str], None] = self._dummy_cb
+        self._cb_data_received: Callable[[bytes], None] = self._dummy_cb
 
     def set_cb_connection_made(self, callback: Optional[Callable]) -> Optional[Callable]:
         """
@@ -21,8 +21,8 @@ class Connection():
             Optional[Callable]: the old callback
         """
         old = self._cb_connection_made
-        self._cb_connection_made = callback
-        return old
+        self._cb_connection_made = callback if callable(callback) else self._dummy_cb
+        return None if old.__name__ == self._dummy_cb.__name__ else old
 
     def set_cb_connection_lost(self, callback: Optional[Callable]) -> Optional[Callable]:
         """
@@ -33,8 +33,8 @@ class Connection():
             Optional[Callable]: the old callback
         """
         old = self._cb_connection_lost
-        self._cb_connection_lost = callback
-        return old
+        self._cb_connection_lost = callback if callable(callback) else self._dummy_cb
+        return None if old.__name__ == self._dummy_cb.__name__ else old
 
     def set_cb_data_received(self, callback: Optional[Callable]) -> Optional[Callable]:
         """
@@ -45,8 +45,8 @@ class Connection():
             Optional[Callable]: the old callback
         """
         old = self._cb_data_received
-        self._cb_data_received = callback
-        return old
+        self._cb_data_received = callback if callable(callback) else self._dummy_cb
+        return None if old.__name__ == self._dummy_cb.__name__ else old
 
     @abstractmethod
     def get_info(self) -> str:
@@ -78,3 +78,6 @@ class Connection():
         Args:
             data (bytes): data to send
         """
+
+    def _dummy_cb(self, *args, **kwargs) -> None:
+        pass
