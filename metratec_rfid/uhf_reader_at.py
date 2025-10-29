@@ -4,6 +4,7 @@ metratec uhf reader gen2
 version 1.3.5
 """
 
+import asyncio
 from time import time
 from typing import Callable, Optional, Any, Dict, List, Union
 
@@ -644,7 +645,18 @@ class UhfReaderAT(ReaderAT):
             config['rssi_threshold'] = rssi_threshold
 
     # @override
-    async def get_inventory(self, timeout: float = 2.0) -> List[UhfTag]:
+    async def get_inventory(self, timeout: float = 4.0) -> List[UhfTag]:
+        """Get an inventory from the current antenna.
+
+        Args:
+            timeout (float, optional): Reader response timeout in seconds. Defaults to 4.0 seconds
+
+        Raises:
+            RfidReaderException: If a reader error occurs.
+
+        Returns:
+            List[UhfTag]: An array with the transponders found.
+        """
         responses: List[str] = await self._send_command("AT+INV", timeout=timeout)
         inventory: List[UhfTag] = self._parse_inventory(responses, time())
         current_antenna = self._config.get('antenna', 1)
@@ -653,12 +665,16 @@ class UhfReaderAT(ReaderAT):
         self._fire_inventory_event(inventory, False)  # type: ignore
         return inventory
 
-    async def get_inventory_report(self, duration: float = 0.0, ignore_error: bool = False) -> List[UhfTag]:
+    async def get_inventory_report(self, duration: float = 0.0, ignore_error: bool = False,
+                                   timeout: float = 4.0) -> List[UhfTag]:
         """Get an inventory report from the current antenna.
 
         Args:
-            duration (int, optional): Inventory report duration in seconds. Defaults to 0.1 seconds.
+            duration (int, optional): Inventory report duration per antenna in seconds. Defaults to 0.0 seconds.
             ignore_error (bool, optional): Set to True to ignore antenna errors. Defaults to False.
+            timeout (float, optional): Reader response timeout in seconds. This timeout must be at least equal
+                to the duration multiplied by the number of antennas used and a communication delay.
+                Defaults to 4.0 seconds
 
         Raises:
             RfidReaderException: If a reader error occurs.
@@ -668,9 +684,9 @@ class UhfReaderAT(ReaderAT):
         """
         self._ignore_errors = ignore_error
         if duration == 0.0:
-            responses: List[str] = await self._send_command('AT+INVR', timeout=2.0 + duration)
+            responses: List[str] = await self._send_command('AT+INVR', timeout=timeout)
         else:
-            responses = await self._send_command('AT+INVR', int(duration * 1000), timeout=2.0 + duration)
+            responses = await self._send_command('AT+INVR', int(duration * 1000), timeout=timeout)
         timestamp: float = time()
         inventory: List[UhfTag] = self._parse_inventory(responses, timestamp, 7, True)
         self._fire_inventory_report_event(inventory, False)
@@ -1418,8 +1434,11 @@ class UhfReaderAT(ReaderAT):
 
     # @override
     async def _prepare_reader_communication(self) -> None:
+        try:
+            await self.stop_inventory_report()
+        except RfidReaderException:
+            self._logger.debug("Prepare reader - error stopping inventory report")
         await super()._prepare_reader_communication()
-        await self.stop_inventory_report()
 
     # @override
     async def _config_reader(self) -> None:
@@ -1471,7 +1490,7 @@ class UhfReaderAT(ReaderAT):
                 if response[split_index+1] == 'N':  # NO TAGS FOUND
                     pass
                 elif response[split_index+1] == 'R':
-                    if len(response) > split_index + 16:
+                    if response[split_index+2] == 'O' and len(response) > split_index + 16:
                         # ROUND FINISHED ANT2
                         try:
                             antenna = int(response[-2:-1])
@@ -1510,7 +1529,7 @@ class UhfReaderAT(ReaderAT):
         """ Checks the inventory and calls the inventory callback """
         if not self._cb_inventory_report:
             if continuous:
-                self._update_inventory(inventory)  # type: ignore
+                asyncio.create_task(self._update_inventory(inventory))  # type: ignore
             return
         if not self._fire_empty_reports and not inventory:
             return
@@ -1719,18 +1738,22 @@ class UhfReaderATMulti(UhfReaderAT):
         self._fire_inventory_event(inventory, False)  # type: ignore
         return inventory
 
-    async def start_inventory_multi(self, ignore_error: bool = False) -> None:
+    async def start_inventory_multi(self, ignore_error: bool = False, timeout: float = 4.0) -> None:
         """Start a continuous inventory on multiple antennas.
 
         This will cause the reader to perform inventories continuously
         until the `stop_inventory_multi()` function is called.
         Antenna ports are chosen according to `set_antenna_multiplex()`.
 
+        Args:
+            interval (float): Time within which an inventory response is expected.
+
         Raises:
             RfidReaderException: If a reader error occurs.
         """
         self._ignore_errors = ignore_error
         await self._send_command('AT+CMINV')
+        self._update_continuous_inventory_check_time(timeout)
 
     async def stop_inventory_multi(self) -> None:
         """Stop the continuous multi inventory.
@@ -1738,5 +1761,11 @@ class UhfReaderATMulti(UhfReaderAT):
         Raises:
             RfidReaderException: If a reader error occurs.
         """
-
-        await self.stop_inventory()
+        try:
+            await self._send_command('AT+BMINV')
+            self._update_continuous_inventory_check_time(None)
+        except RfidReaderException as err:
+            if "is not running" in str(err):
+                return
+            raise err
+        self._update_continuous_inventory_check_time(None)

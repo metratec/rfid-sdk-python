@@ -7,6 +7,7 @@ from .reader_exception import RfidReaderException
 from .connection import Connection
 from .uhf_tag import UhfTag
 from .reader_ascii import ReaderAscii
+# pylint: disable=too-many-lines
 
 
 class UhfReaderAscii(ReaderAscii):
@@ -163,7 +164,27 @@ class UhfReaderAscii(ReaderAscii):
 
     # @override
     async def get_inventory(self, single_slot: bool = False, only_new_tags: bool = False,
-                            timeout: float = 2.0) -> List[UhfTag]:
+                            timeout: float = 4.0) -> List[UhfTag]:
+        """Get an inventory from the current antenna.
+
+        Args:
+            single_slot (bool): If enabled, the reader only searches for
+                one transponder, which is faster.
+                If more than one transponder is found, an error is raised.
+                Defaults to False.
+
+            only_new_tags (bool): The reader finds each transponder only
+                once as long as the transponder is powered within the RF
+                field of the reader. Defaults to False.
+
+            timeout (float, optional): reader response timeout in seconds.
+                Defaults to 4 seconds.
+        Raises:
+            RfidReaderException: If a reader error occurs.
+
+        Returns:
+            List[UhfTag]: An array with the transponders found.
+        """
         if self._config['antenna_mode'][0] != "S":
             # Not in single antenna mode ... switch mode
             await self.set_antenna(await self.get_antenna())
@@ -175,7 +196,32 @@ class UhfReaderAscii(ReaderAscii):
 
     # @override
     async def get_inventory_multi(self, ignore_error: bool = False, single_slot: bool = False,
-                                  only_new_tags: bool = False) -> List[UhfTag]:
+                                  only_new_tags: bool = False, timeout: float = 4.0) -> List[UhfTag]:
+        """Get an inventory from multiple antennas.
+
+        Antenna ports are chosen according to `set_antenna_multiplex()`.
+
+        Args:
+            ignore_error (bool, optional): Set to True to ignore antenna errors.
+                Defaults to False.
+
+            single_slot (bool): If enabled, the reader only searches for
+                one transponder, which is faster.
+                If more than one transponder is found, an error is raised.
+                Defaults to False.
+
+            only_new_tags (bool): The reader finds each transponder only
+                once as long as the transponder is powered within the RF
+                field of the reader. Defaults to False.
+            timeout (float, optional): reader response timeout per antenna in seconds.
+                Defaults to 4 seconds.
+
+        Raises:
+            RfidReaderException: If a reader error occurs.
+
+        Returns:
+            List[UhfTag]: An array with the transponders found.
+        """
         if self._config['antenna_mode'][0] != "M":
             # Not in multiplex antenna mode ... switch mode
             await self.set_antenna_multiplex(await self.get_antenna_multiplex())
@@ -183,20 +229,77 @@ class UhfReaderAscii(ReaderAscii):
         for _ in range(0, await self.get_antenna_multiplex()):
             self._inv_called = True
             inv = await self._get_last_inventory("INV", "SSL" if single_slot else None,
-                                                 "ONT" if only_new_tags else None)
+                                                 "ONT" if only_new_tags else None, timeout=timeout)
             inventory.extend(inv['transponders'])
         return inventory
 
     # @override
-    async def start_inventory(self, single_slot: bool = False, only_new_tags: bool = False) -> None:
+    async def start_inventory(self, single_slot: bool = False, only_new_tags: bool = False,
+                              timeout: float = 4.0) -> None:
+        """Start a continuous inventory.
+
+        This will cause the reader to perform inventories continuously
+        until the `stop_inventory()` function is called.
+
+        Args:
+            single_slot (bool): If enabled, the reader only searches for
+                one transponder, which is faster.
+                If more than one transponder is found, an error is raised.
+                Defaults to False.
+
+            only_new_tags (bool): The reader finds each transponder only
+                once as long as the transponder is powered within the RF
+                field of the reader. Defaults to False.
+
+            interval (float): Time within which an inventory response is expected.
+
+        Raises:
+            RfidReaderException: If a reader error occurs.
+        """
         self._inv_called = True
-        return await super().start_inventory(single_slot, only_new_tags)
+        await super().start_inventory(single_slot, only_new_tags)
+        self._update_continuous_inventory_check_time(timeout)
+
+    # @override
+    async def stop_inventory(self) -> None:
+        await super().stop_inventory()
+        self._update_continuous_inventory_check_time(None)
 
     # @override
     async def start_inventory_multi(self, ignore_error: bool = False, single_slot: bool = False,
-                                    only_new_tags: bool = False) -> None:
+                                    only_new_tags: bool = False, timeout: float = 4.0) -> None:
+        """Start a continuous inventory on multiple antennas.
+
+        This will cause the reader to perform inventories continuously
+        until the `stop_inventory_multi()` function is called.
+        Antenna ports are chosen according to `set_antenna_multiplex()`.
+
+        Args:
+            ignore_error (bool, optional): Set to True to ignore antenna
+                errors. Defaults to False.
+
+            single_slot (bool): If enabled, the reader only searches for
+                one transponder, which is faster.
+                If more than one transponder is found, an error is raised.
+                Defaults to False.
+
+            only_new_tags (bool): The reader finds each transponder only
+                once as long as the transponder is powered within the RF
+                field of the reader. Defaults to False.
+
+            interval (float): Time within which an inventory response is expected.
+
+        Raises:
+            RfidReaderException: If a reader error occurs.
+        """
         self._inv_called = True
-        return await super().start_inventory_multi(ignore_error, single_slot, only_new_tags)
+        await super().start_inventory_multi(ignore_error, single_slot, only_new_tags)
+        self._update_continuous_inventory_check_time(timeout)
+
+    # @override
+    async def stop_inventory_multi(self) -> None:
+        await super().stop_inventory_multi()
+        self._update_continuous_inventory_check_time(None)
 
     async def set_mask(self, mask: str, memory: str = "EPC", start: int = 0, bit_length: Optional[int] = None) -> None:
         """Set a mask for all inventory operations.
@@ -873,7 +976,7 @@ class UhfReaderAscii(ReaderAscii):
             TimeoutError: if a timeout occurs
 
         Returns:
-            List[Tag]: inventory response
+            List[UhfTag]: inventory response
         """
         await self._communication_lock.acquire()
         try:
@@ -898,6 +1001,7 @@ class UhfReaderAscii(ReaderAscii):
 
         # E0040150954F02B1<CR>E200600311753E33<CR>ARP 12<CR>IVF 02
         timestamp = time()
+        self._set_last_inventory_time(timestamp)
         lines = data.split('\r')
         lines_count = len(lines) - 1
         inventory: List[UhfTag] = []

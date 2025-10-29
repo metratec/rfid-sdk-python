@@ -75,13 +75,25 @@ class ReaderAT(RfidReader):
                 f"Not expected response for command AT+ANT? - {response}") from exc
 
     # @override
-    async def start_inventory(self) -> None:
+    async def start_inventory(self, timeout: float = 4.0) -> None:
+        """Start a continuous inventory.
+
+        This will cause the reader to perform inventories continuously
+        until the `stop_inventory()` function is called.
+
+        Args:
+            interval (float): Time within which an inventory response is expected.
+        Raises:
+            RfidReaderException: If a reader error occurs.
+        """
         await self._send_command('AT+CINV')
+        self._update_continuous_inventory_check_time(timeout)
 
     # @override
     async def stop_inventory(self) -> None:
         try:
             await self._send_command('AT+BINV')
+            self._update_continuous_inventory_check_time(None)
         except RfidReaderException as err:
             if "is not running" in str(err):
                 return
@@ -122,8 +134,12 @@ class ReaderAT(RfidReader):
             raise RfidReaderException("Inputs not available") from err
 
     async def set_heartbeat(self, interval: int) -> None:
+        """Set the heartbeat interval of the reader.
+
+        Args:
+            interval (float): Interval in seconds [0, 60].
+        """
         await self._send_command("AT+HBT", interval)
-        await super().set_heartbeat(interval)
 
     async def send_custom_command(self, command: str, timeout: float = 2.0) -> List[str]:
         """Send an arbitrary AT command to the reader and return the response.
@@ -197,6 +213,10 @@ class ReaderAT(RfidReader):
             timestamp (float): timestamp
         """
 
+    # @override
+    async def _connection_test(self):
+        await self._send_command("AT")
+
     ###############################################################################################
     # Internal methods
     ###############################################################################################
@@ -241,6 +261,7 @@ class ReaderAT(RfidReader):
             if msg[1] == 'C':  # +CINV +CINVR
                 # continuous inventory event
                 if msg[2] == 'I' or msg[3] == 'I':  # +CINV +CINVR +CMINV
+                    self._set_last_inventory_time(timestamp)
                     self._handle_inventory_events(msg, timestamp)
                     return
             if msg[1] == 'H' and len(msg) == 4:  # +HBT

@@ -329,8 +329,12 @@ class ReaderAscii(RfidReader):
         await self.connect()
 
     async def set_heartbeat(self, interval: int) -> None:
+        """Set the heartbeat interval of the reader.
+
+        Args:
+            interval (float): Interval in seconds [0, 60].
+        """
         await self._set_command("HBT", interval)
-        await super().set_heartbeat(interval)
 
     ###############################################################################################
     # Abstract methods
@@ -395,6 +399,10 @@ class ReaderAscii(RfidReader):
         Args:
             data (str): inventory response
         """
+
+    # @override
+    async def _connection_test(self):
+        await self._get_command("RFW")
 
     ###############################################################################################
     # Internal methods

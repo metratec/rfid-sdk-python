@@ -131,7 +131,7 @@ class HfReaderAscii(ReaderAscii):
 
     # @override
     async def get_inventory(self, single_slot: bool = False, only_new_tags: bool = False,
-                            afi: Optional[int] = None, timeout: float = 2.0) -> List[HfTag]:
+                            afi: Optional[int] = None, timeout: float = 4.0) -> List[HfTag]:
         """Get an inventory from the current antenna.
 
         Args:
@@ -147,11 +147,13 @@ class HfReaderAscii(ReaderAscii):
             afi (int): Set the Application Family Identifier. Transponders
                 with other AFI will not answer.
 
+            timeout (float, optional): reader response timeout in seconds.
+                Defaults to 4 seconds.
         Raises:
             RfidReaderException: If a reader error occurs.
 
         Returns:
-            List[Tag]: An array with the transponders found.
+            List[HfTag]: An array with the transponders found.
         """
         if self._config['antenna_mode'][0] != "S":
             # Not in single antenna mode ... switch mode
@@ -164,7 +166,8 @@ class HfReaderAscii(ReaderAscii):
 
     # @override
     async def get_inventory_multi(self, ignore_error: bool = False, single_slot: bool = False,
-                                  only_new_tags: bool = False, afi: Optional[int] = None) -> List[HfTag]:
+                                  only_new_tags: bool = False, afi: Optional[int] = None,
+                                  timeout: float = 10.0) -> List[HfTag]:
         """Get an inventory from multiple antennas.
 
         Antenna ports are chosen according to `set_antenna_multiplex()`.
@@ -182,12 +185,16 @@ class HfReaderAscii(ReaderAscii):
                 once as long as the transponder is powered within the RF
                 field of the reader. Defaults to False.
 
+            timeout (float, optional): reader response timeout in seconds.
+                Defaults to 10 seconds.
+
         Raises:
             RfidReaderException: If a reader error occurs.
 
         Returns:
             List[HfTag]: An array with the transponders found.
         """
+        # pylint: disable=too-many-arguments, too-many-positional-arguments
         if self._config['antenna_mode'][0] != "M":
             # Not in multiplex antenna mode ... switch mode
             await self.set_antenna_multiplex(await self.get_antenna_multiplex())
@@ -195,12 +202,13 @@ class HfReaderAscii(ReaderAscii):
         for _ in range(0, await self.get_antenna_multiplex()):
             inv = await self._get_last_inventory("INV", "SSL" if single_slot else None,
                                                  "ONT" if only_new_tags else None,
-                                                 "AFI {afi:02X}" if afi else None)
+                                                 "AFI {afi:02X}" if afi else None,
+                                                 timeout=timeout)
             inventory.extend(inv['transponders'])
         return inventory
 
     async def start_inventory(self, single_slot: bool = False, only_new_tags: bool = False,
-                              afi: Optional[int] = None) -> None:
+                              afi: Optional[int] = None, timeout: float = 4.0) -> None:
         """Start a continuous inventory.
 
         This will cause the reader to perform inventories continuously
@@ -219,6 +227,8 @@ class HfReaderAscii(ReaderAscii):
             afi (int): Set the Application Family Identifier. Transponders
                 with other AFI will not answer.
 
+            interval (float): Time within which an inventory response is expected.
+,
         Raises:
             RfidReaderException: If a reader error occurs.
         """
@@ -228,9 +238,16 @@ class HfReaderAscii(ReaderAscii):
             await self.set_antenna(await self.get_antenna())
         self._send_command("CNR INV", "SSL" if single_slot else None, "ONT" if only_new_tags else None,
                            "AFI {afi:02X}" if afi else None)
+        self._update_continuous_inventory_check_time(timeout)
+
+    # @override
+    async def stop_inventory(self) -> None:
+        await super().stop_inventory()
+        self._update_continuous_inventory_check_time(None)
 
     async def start_inventory_multi(self, ignore_error: bool = False, single_slot: bool = False,
-                                    only_new_tags: bool = False, afi: Optional[int] = None) -> None:
+                                    only_new_tags: bool = False, afi: Optional[int] = None,
+                                    timeout: float = 10.0) -> None:
         """Start a continuous inventory on multiple antennas.
 
         This will cause the reader to perform inventories continuously
@@ -253,15 +270,24 @@ class HfReaderAscii(ReaderAscii):
             afi (int): Set the Application Family Identifier. Transponders
                 with other AFI will not answer.
 
+            interval (float): Time within which an inventory response is expected.
+
         Raises:
             RfidReaderException: If a reader error occurs.
         """
+        # pylint: disable=too-many-arguments, too-many-positional-arguments
         # Method from ReaderGen1 overridden
         if self._config['antenna_mode'][0] != "M":
             # Not in multiplex antenna mode ... switch mode
             await self.set_antenna_multiplex(await self.get_antenna_multiplex())
         self._send_command("CNR INV", "SSL" if single_slot else None, "ONT" if only_new_tags else None,
                            "AFI {afi:02X}" if afi else None)
+        self._update_continuous_inventory_check_time(timeout)
+
+    # @override
+    async def stop_inventory_multi(self) -> None:
+        await super().stop_inventory_multi()
+        self._update_continuous_inventory_check_time(None)
 
     async def read_tag_data(self, block_number: int, tag_id: Optional[str] = None,
                             option_flag: bool = False) -> HfTag:
@@ -474,7 +500,7 @@ class HfReaderAscii(ReaderAscii):
             TimeoutError: if a timeout occurs
 
         Returns:
-            List[Tag]: inventory response
+            List[HfTag]: inventory response
         """
         await self._communication_lock.acquire()
         try:
@@ -500,6 +526,7 @@ class HfReaderAscii(ReaderAscii):
     def _parse_inventory(self, data: str) -> None:
         # E0040150954F02B1<CR>E200600311753E33<CR>ARP 12<CR>IVF 02
         timestamp = time()
+        self._set_last_inventory_time(timestamp)
         split = data.split('\r')
         inventory: List[HfTag] = []
         inventory_error: List[HfTag] = []
@@ -599,7 +626,7 @@ class HfReaderAscii(ReaderAscii):
             TimeoutError: if a timeout occurs
 
         Returns:
-            List[Tag]: inventory response
+            List[HfTag]: inventory response
         """
         await self._communication_lock.acquire()
         try:

@@ -198,8 +198,19 @@ class NfcReaderAT(ReaderAT):
             raise RfidReaderException(
                 f"Not expected response for command AT+INVS? - {responses}") from exc
 
-    async def get_inventory(self) -> List[HfTag]:
-        responses = await self._send_command("AT+INV")
+    async def get_inventory(self, timeout: float = 4.0) -> List[HfTag]:
+        """Get an inventory from the current antenna.
+
+        Args:
+            timeout (float, optional): Reader response timeout in seconds. Defaults to 4.0 seconds
+
+        Raises:
+            RfidReaderException: If a reader error occurs.
+
+        Returns:
+            List[HfTag]: An array with the transponders found.
+        """
+        responses = await self._send_command("AT+INV", timeout=timeout)
         inventory = self._parse_inventory(responses, time())
         current_antenna = self._config.get('antenna', 1)
         for tag in inventory:
@@ -207,7 +218,7 @@ class NfcReaderAT(ReaderAT):
         self._fire_inventory_event(inventory, False)  # type: ignore
         return inventory
 
-    async def get_inventory_multi(self, ignore_error: bool = False) -> List[HfTag]:
+    async def get_inventory_multi(self, ignore_error: bool = False, timeout: float = 10.0) -> List[HfTag]:
         """Get an inventory from multiple antennas.
 
         Antenna ports are chosen according to `set_antenna_multiplex()`.
@@ -215,12 +226,12 @@ class NfcReaderAT(ReaderAT):
         Args:
             ignore_error (bool, optional): Set to True to ignore antenna errors.
                 Defaults to False.
-
+            timeout (float, optional): reader response timeout in seconds. Defaults to 10 seconds.
         Raises:
             RfidReaderException: If a reader error occurs.
 
         Returns:
-            List[Tag]: An array with the transponders found.
+            List[HfTag]: An array with the transponders found.
         """
         # pylint: disable=unused-argument
 

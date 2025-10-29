@@ -3,6 +3,15 @@
 Release Notes
 #############
 
+1.4.3
+=====
+
+:Release Date: 2025-10-29
+
+* The Reader will reset if the continuous inventory does not respond
+* Connection is now checked without the using of the heartbeat.
+* Inventory report are reported correctly.
+
 1.4.2
 =====
 

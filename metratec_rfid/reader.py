@@ -81,9 +81,12 @@ class RfidReader(BaseClass):
         self._inventory: Dict[str, Tag] = {}
         self._inventory_condition = asyncio.Condition()
         self._fire_empty_inventories = False
-        self._heartbeat: int = 10
+        self._connection_check_time: float = 10.0
+        self._connection_check_interval = self._connection_check_time / 10
+        self._continuous_inventory_check_time: Optional[float] = None
         self._timeout: float = 25.0
         self._last_message_time: float = 0
+        self._last_inventory_time: float = 0
 
     async def connect(self, timeout: float = 5.0, port_re: str = "USB") -> None:
         """Connect the reader.
@@ -259,20 +262,6 @@ class RfidReader(BaseClass):
             self._inventory.clear()
             return inventory
 
-    async def set_heartbeat(self, interval: int) -> None:
-        """Set the heartbeat interval of the reader.
-
-        If the interval is larger than 0, the SDK will regularly check
-        whether the reader is still connected and automatically
-        attempt to re-connect and raise and error on failure.
-
-        Args:
-            interval (float): Interval in seconds [0, 60].
-        """
-        self._heartbeat = interval
-        if self.is_connected():
-            self._timeout = 2.5 * self._heartbeat
-
     def get_status(self) -> Dict[str, Any]:
         """Return status information about the reader.
 
@@ -445,26 +434,55 @@ class RfidReader(BaseClass):
         if self._status['status'] != self.ERROR:
             self._update_status(self.ERROR, reason)
 
+    @abstractmethod
+    async def _connection_test(self) -> Dict[str, Any]:
+        """Sends a connection test command to the reader
+
+        Raises:
+            RfidReaderException: If a reader error occurs.
+        """
+
+    def _update_connection_check_time(self, connection_check_time: float):
+        self._connection_check_time = connection_check_time
+        self._connection_check_interval = self._connection_check_time / 10
+
+    def _update_continuous_inventory_check_time(self, continuous_inventory_check_time: Optional[float]):
+        self._continuous_inventory_check_time = continuous_inventory_check_time
+        self._set_last_inventory_time(time())
+
+    def _set_last_inventory_time(self, last_inventory_time: float):
+        self._last_inventory_time = last_inventory_time
+
     async def _check_connection(self) -> None:
         """Check the connection - reconnect the device if no messages have been received for a while
         """
-        if self._heartbeat <= 0:
-            return
-        self._timeout = 2.5 * self._heartbeat
         while self.get_status()['status'] >= 1:
-            await asyncio.sleep(5)
-            if self._last_message_time + self._timeout >= time():
+            await asyncio.sleep(self._connection_check_interval)
+            if self._continuous_inventory_check_time:
+                if self._last_inventory_time + self._continuous_inventory_check_time < time():
+                    msg = "continuous inventory problem - reset"
+                    break
+            if self._last_message_time + self._connection_check_time >= time():
                 continue
-            # connection lost
-            self._update_status(self.ERROR, 'connection lost')
+            # check if the connection is lost
             try:
-                # await self.disconnect()
-                self._connection.disconnect()
-                self._send = self._send_not_connected
-                await self.connect()
-            except TimeoutError:
-                pass
-            break
+                await self._connection_test()
+                # connection is alive
+                continue
+            # pylint: disable=broad-exception-caught
+            except Exception as err:
+                self._logger.debug("connection check fails - %s", err)
+                msg = 'connection lost'
+                break
+        # connection lost or continuous inventory missing
+        self._update_status(self.ERROR, msg)
+        try:
+            # await self.disconnect()
+            self._connection.disconnect()
+            self._send = self._send_not_connected
+            await self.connect()
+        except TimeoutError:
+            pass
 
     def _add_data_to_receive_buffer(self, data: str) -> None:
         """ add the received data to the internal response buffer """
@@ -508,17 +526,12 @@ class RfidReader(BaseClass):
             await self._prepare_reader_communication()
             await self._config_reader()
             try:
-                self._heartbeat = self._config.get('heartbeat', self._heartbeat)
-                await self.set_heartbeat(self._heartbeat)
-            except RfidReaderException:
-                self.get_logger().debug("no heartbeat available - connection check is disabled")
-                self._heartbeat = 0
-            try:
                 await self.enable_input_events(self._cb_input_changed is not None)
             except RfidReaderException as err:
                 if "not available" not in str(err):
                     raise err
             self._update_status(self.RUNNING, "running")
+            self._update_continuous_inventory_check_time(None)
             self._task_connection_check = asyncio.ensure_future(self._check_connection())
             self._handle_data = self._data_received
         except (TimeoutError, RfidReaderException) as err:
