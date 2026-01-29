@@ -539,7 +539,10 @@ class RfidReader(BaseClass):
             self.get_logger().warning(msg)
             self._update_status(self.ERROR, msg)
             # try reconfigure after 5 seconds
-            await asyncio.sleep(5)
+            try:
+                await asyncio.sleep(5)
+            except asyncio.CancelledError:
+                return
             self._task_config = asyncio.ensure_future(self._config_device())
 
     def _send_not_connected(self, data: str) -> None:

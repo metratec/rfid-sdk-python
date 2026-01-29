@@ -85,11 +85,12 @@ async def detect_readers(port_re="USB", verbose=False, legacy=False):
             try:
                 await reader.connect(timeout=3.0)
                 info = await reader.get_reader_info()
-                await reader.disconnect()
                 break
             except RfidReaderException as e:
                 # connection failed or unexpected reader info
                 print(e) if verbose else lambda: None
+            finally:
+                await reader.disconnect()
 
         # create reader object from firmware name
         if info is None:

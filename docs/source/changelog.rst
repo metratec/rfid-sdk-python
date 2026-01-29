@@ -3,6 +3,13 @@
 Release Notes
 #############
 
+1.4.4
+=====
+
+:Release Date: 2026-01-29
+
+* Fixed error when detecting legacy readers using the ‘detect_reader’ method
+
 1.4.3
 =====
 

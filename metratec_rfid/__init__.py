@@ -8,7 +8,7 @@ rfid module
 # from .connection.serial_connection import SerialConnection
 # from .connection.socket_connection import SocketConnection
 
-__version__ = "1.4.3"
+__version__ = "1.4.4"
 __email__ = "neumann@metratec.com"
 __license__ = "MIT License"
 __author__ = "Matthias Neumann"

@@ -16,7 +16,7 @@ with open(path.join(HERE, 'README.md'), encoding='utf-8') as f:
 # This call to setup() does all the work
 setup(
     name="metratec_rfid",
-    version="1.4.3",
+    version="1.4.4",
     description="Metratec RFID SDK",
     long_description=long_description,
     long_description_content_type="text/markdown",

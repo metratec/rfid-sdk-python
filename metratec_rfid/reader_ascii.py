@@ -420,6 +420,22 @@ class ReaderAscii(RfidReader):
             return
         self._add_data_to_receive_buffer(data)
 
+    # @override
+    # default implementation...
+    def _data_received(self, data: str, timestamp: float):
+        # disable 'Too many return statements' warning - pylint: disable=R0911
+        self.get_logger().debug("data received %s", data.replace(
+            "\r", "<CR>").replace("\n", "<LF>"))
+        data = data[:-1]
+        if data[0] == 'H' and data[2] == 'T':  # HBT
+            return
+        if len(data) >= 10 and data[-6:-3] == 'IVF':
+            self._parse_inventory(data)
+            if self._custom_command:
+                self._add_data_to_receive_buffer(data)
+            return
+        self._add_data_to_receive_buffer(data)
+
     async def _prepare_reader_communication(self) -> None:
         """Override for prepare the reader for the communication"""
         # disable Too many branches warning - pylint: disable=R0912
@@ -486,8 +502,8 @@ class ReaderAscii(RfidReader):
             try:
                 return await self._recv()
             except TimeoutError as err:
-                raise TimeoutError("no reader response for command " + command + " " +
-                                   " ".join(str(x) for x in parameters)) from err
+                raise RfidReaderException("no reader response for command " + command + " " +
+                                          " ".join(str(x) for x in parameters)) from err
         finally:
             self._communication_lock.release()
 
