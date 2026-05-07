@@ -75,7 +75,7 @@ class ReaderAT(RfidReader):
                 f"Not expected response for command AT+ANT? - {response}") from exc
 
     # @override
-    async def start_inventory(self, timeout: float = 4.0) -> None:
+    async def start_inventory(self, timeout: float = 5.0) -> None:
         """Start a continuous inventory.
 
         This will cause the reader to perform inventories continuously
@@ -305,26 +305,51 @@ class ReaderAT(RfidReader):
                     msg: str = "Reader not " + ("responding" if self.get_status()["status"] >= 1 else "connected")
                     raise RfidReaderException(msg) from err
                 if send_command not in resp:
+                    # Failed commands are not echoed by the firmware - the first
+                    # line is already the error frame ("+CMD: <Error (xx xx xx xx)>"
+                    # or, on newer firmware, "+ERR: <code: message>"). Drain the
+                    # trailing ERROR terminator so it doesn't leak into the buffer
+                    # and raise the actual reader error instead of a generic one.
+                    if resp.startswith('+'):
+                        try:
+                            terminator = await self._recv(timeout=0.5)
+                        except TimeoutError:
+                            terminator = None
+                        if terminator == 'ERROR':
+                            try:
+                                err_msg = resp[resp.rindex("<") + 1:resp.rindex(">")]
+                            except ValueError:
+                                err_msg = f"{command} ERROR"
+                            raise self._parse_error_response(err_msg)
                     raise RfidReaderException(
                         f"Not expected response for {send_command} - {resp}")
             max_time: float = time() + timeout
-            response: str = ""
+            # Accumulate response lines as a list. Earlier code relied on
+            # multi-line responses arriving in a single read (because the serial
+            # layer used \n as the only line delimiter and the firmware separated
+            # internal lines with \r), then split on \r. With the byte-by-byte
+            # line splitter in SerialConnection each line arrives separately, so
+            # we collect them explicitly here.
+            response: List[str] = []
             try:
                 while True:
                     resp = await self._recv(timeout)
                     if resp is None:
                         break
                     if resp == 'OK':
-                        return response.split("\r") if response else []
+                        return response
                     if resp == 'ERROR':
-                        try:
-                            msg = response[response.rindex(
-                                "<")+1:response.rindex(">")]
-                            raise self._parse_error_response(msg)
-                        except ValueError:
+                        msg: str = ""
+                        for line in reversed(response):
+                            try:
+                                msg = line[line.rindex("<") + 1:line.rindex(">")]
+                                break
+                            except ValueError:
+                                continue
+                        if not msg:
                             msg = f"{command} ERROR"
-                        raise RfidReaderException(str(msg))
-                    response = resp
+                        raise self._parse_error_response(msg)
+                    response.append(resp)
                     if max_time <= time():
                         break
             except TimeoutError:
@@ -333,7 +358,7 @@ class ReaderAT(RfidReader):
                 raise RfidReaderException(
                     f"No reader response for command {send_command}")
             raise RfidReaderException(
-                f"Wrong response for command {send_command} - {str(response)}")
+                f"Wrong response for command {send_command} - {response}")
         except AttributeError as err:
             self.get_logger().debug("send command error - %s", err)
             raise RfidReaderException("Reader not connected") from err

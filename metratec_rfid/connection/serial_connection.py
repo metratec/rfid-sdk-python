@@ -160,14 +160,28 @@ class SerialConnection(Connection):
         while self._is_started:
             if not self._writer:
                 await self._connect()
+            # Accumulate bytes and split on any of \r, \n, or \r\n. Some firmware
+            # versions terminate continuous-inventory events with bare \r (no LF),
+            # so a fixed \n delimiter would block forever waiting for an LF that
+            # never arrives.
+            line_buffer = bytearray()
             while self._writer:
                 # disable Catching too general exception Exception - pylint: disable=W0703
                 try:
                     while self._reader:
-                        msg: bytes = await self._reader.readuntil(self._separator_encoded)
-                        # self._logger.debug("data received (config) %s",
-                        #         msg.decode().replace("\r", "<CR>").replace("\n", "<LF>"))
-                        self.data_received(msg[:-1])
+                        chunk: bytes = await self._reader.read(4096)
+                        if not chunk:
+                            # peer closed; let outer loop reconnect
+                            break
+                        for byte in chunk:
+                            if byte in (0x0d, 0x0a):  # \r or \n -> end of line
+                                if line_buffer:
+                                    # Append \r to keep the legacy contract:
+                                    # downstream handlers strip one trailing byte.
+                                    self.data_received(bytes(line_buffer) + b'\r')
+                                    line_buffer.clear()
+                            else:
+                                line_buffer.append(byte)
                 except serial.SerialException as err:
                     # print("exception consumed")
                     try:

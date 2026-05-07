@@ -456,11 +456,18 @@ class RfidReader(BaseClass):
     async def _check_connection(self) -> None:
         """Check the connection - reconnect the device if no messages have been received for a while
         """
+        # Tight polling while continuous inventory is active so the watchdog
+        # fires at the configured deadline (not up to one full check_interval later).
+        inventory_check_interval = 0.1
         while self.get_status()['status'] >= 1:
-            await asyncio.sleep(self._connection_check_interval)
+            sleep_time = (
+                inventory_check_interval if self._continuous_inventory_check_time
+                else self._connection_check_interval
+            )
+            await asyncio.sleep(sleep_time)
             if self._continuous_inventory_check_time:
                 if self._last_inventory_time + self._continuous_inventory_check_time < time():
-                    msg = "continuous inventory problem - reset"
+                    msg = "continuous inventory timeout - self reset"
                     break
             if self._last_message_time + self._connection_check_time >= time():
                 continue
@@ -472,9 +479,9 @@ class RfidReader(BaseClass):
             # pylint: disable=broad-exception-caught
             except Exception as err:
                 self._logger.debug("connection check fails - %s", err)
-                msg = 'connection lost'
+                msg = 'connection test failed - self reset'
                 break
-        # connection lost or continuous inventory missing
+        # connection test failed or continuous inventory missing
         self._update_status(self.ERROR, msg)
         try:
             # await self.disconnect()
