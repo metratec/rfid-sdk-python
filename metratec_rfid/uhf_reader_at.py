@@ -543,16 +543,20 @@ class UhfReaderAT(ReaderAT):
 
         Returns:
             Dict[str, Any]: Inventory settings with keys 'only_new_tag', 'with_rssi',
-            'with_tid', 'fast_start', 'phase', 'select' and 'target'.
+            'with_tid', 'fast_start', 'phase', 'select', 'target' and
+            'rssi_threshold'. Which of them are present depends on the reader
+            firmware. 'with_tid' is a bool for the on/off case and an int if
+            the reader reports an explicit TID byte count.
         """
         responses: List[str] = await self._send_command("AT+INVS?")
-        # AT+INVS=ONT, RSSI, TID, FastStart, PHASE
-        # +INVS: 0,1,0
+        # AT+INVS=ONT,RSSI,TID,FAST_START,PHASE,SELECT,TARGET,RSSI_THRESHOLD
+        # +INVS: 0,1,0,0,0,ALL,DUAL,-100
         data: List[str] = responses[0][7:].split(',')
         try:
             config: Dict[str, Any] = {'only_new_tag': data[0] == '1',
                                       'with_rssi': data[1] == '1',
-                                      'with_tid': data[2] == '1'
+                                      # TID is '0'/'1' or an explicit byte count
+                                      'with_tid': data[2] == '1' if data[2] in ('0', '1') else int(data[2])
                                       }
             if len(data) >= 4:
                 config['fast_start'] = data[3] == '1'
@@ -565,12 +569,12 @@ class UhfReaderAT(ReaderAT):
             if len(data) >= 8:
                 config['rssi_threshold'] = data[7]
             return config
-        except IndexError as exc:
+        except (IndexError, ValueError) as exc:
             raise RfidReaderException(
                 f"Not expected response for command AT+INVS? - {responses}") from exc
 
     async def set_inventory_settings(self, only_new_tag: Optional[bool] = None, with_rssi: Optional[bool] = None,
-                                     with_tid: Optional[bool] = None, fast_start: Optional[bool] = None,
+                                     with_tid: Optional[Union[bool, int]] = None, fast_start: Optional[bool] = None,
                                      phase: Optional[bool] = None, select: Optional[str] = None,
                                      target: Optional[str] = None, rssi_threshold: Optional[int] = None) -> None:
         """Configure the inventory response.
@@ -580,7 +584,10 @@ class UhfReaderAT(ReaderAT):
 
             with_rssi (bool, optional): Append the RSSI value to the response. Defaults to True.
 
-            with_tid (bool, optional): Append the TID to the response. Defaults to False.
+            with_tid (bool or int, optional): Append the TID to the response.
+                True reads the default length of 12 bytes, False disables the
+                TID output. Pass an even byte count greater than 1 to read only
+                that many bytes of TID data. Defaults to False.
 
             fast_start (bool, optional): Does an inventory without putting all tags into session
                 state A at the start. This can speed up the start of the inventory, but it requires
@@ -593,7 +600,9 @@ class UhfReaderAT(ReaderAT):
                 'NSL' for not-selected tags.
 
             target (str, optional): Used to set which tags should respond.
-                Tags with inventoried state 'A' or 'B'.
+                'A' or 'B' limits the inventory to tags with the respective
+                inventoried state. 'DUAL' alternates between both states
+                during a continuous inventory.
 
             rssi_threshold (int, optional): The RSSI threshold for tags. Only tags with an RSSI greater
                 than or equal to rssi_threshold are reported.
@@ -606,13 +615,18 @@ class UhfReaderAT(ReaderAT):
         def bti(value: bool):
             return '1' if value else '0'
 
+        def tid_to_str(value: Union[bool, int]) -> str:
+            # TID accepts an explicit byte count besides on/off. bool has to be
+            # checked first, since bool is a subclass of int.
+            return bti(value) if isinstance(value, bool) else str(value)
+
         config: Dict[str, Any] = self._config['inventory']
         config_size = len(config)
 
         parameters: list[Any] = []
         parameters.append(bti(only_new_tag) if only_new_tag is not None else bti(config['only_new_tag']))
         parameters.append(bti(with_rssi) if with_rssi is not None else bti(config['with_rssi']))
-        parameters.append(bti(with_tid) if with_tid is not None else bti(config['with_tid']))
+        parameters.append(tid_to_str(with_tid) if with_tid is not None else tid_to_str(config['with_tid']))
         if config_size >= 4:
             parameters.append(bti(fast_start) if fast_start is not None else bti(config['fast_start']))
         if config_size >= 5:
@@ -1138,6 +1152,64 @@ class UhfReaderAT(ReaderAT):
             the command was not successful.
         """
         return await self.lock_tag_permament("EPC", password, epc_mask)
+
+    async def bitmap_lock_tag(self, lock_mask: str, password: str = "", lock: bool = True,
+                              permalock: bool = False, epc_mask: Optional[str] = None) -> List[UhfTag]:
+        """Lock or unlock several memory banks in a single transaction.
+
+        Unlike `lock_tag()`, which affects one memory bank per call, this
+        command configures multiple banks at once. Some transponder types
+        only support permanent locking and require all memory areas to be
+        locked together, which is what this command is meant for.
+
+        What the locked state means depends on the memory bank: the kill
+        and access passwords are read- and write-locked, the EPC, TID and
+        user memory are write-locked only.
+
+        Args:
+            lock_mask (str): 5 digit binary string selecting the affected
+                memory banks. A `1` applies the new `lock`/`permalock`
+                combination, a `0` leaves that bank in its current state.
+                Bit order is kill password, access password, EPC, TID,
+                user memory - e.g. `"11000"` for both passwords.
+
+            password (str, optional): The current access password (32 bit,
+                8 hex digits). Can be left empty if none of the affected
+                memory banks is locked. Defaults to "".
+
+            lock (bool, optional): True to lock the selected memory banks,
+                False to unlock them. Defaults to True.
+
+            permalock (bool, optional): True to fix the selected memory
+                banks permanently to the state given by `lock`. This
+                cannot be undone. Defaults to False.
+
+            epc_mask (str, optional): EPC mask filter. Defaults to None.
+
+        Raises:
+            RfidReaderException: If the lock mask is malformed or a reader
+                error occurs.
+
+        Returns:
+            List[UhfTag]: List with handled tags. If a tag `has_error()`,
+            the command was not successful.
+
+        Example:
+            >>> # permanently lock every memory bank of an unlocked tag
+            >>> await reader.bitmap_lock_tag("11111", permalock=True)
+        """
+        # disable 'Too many (positional) arguments' warning - pylint: disable=R0913,R0917
+        # The mask is checked here because permalocking cannot be undone and a
+        # malformed mask would silently target the wrong memory banks.
+        if len(lock_mask) != 5 or set(lock_mask) - {'0', '1'}:
+            raise RfidReaderException(f"Lock mask must be 5 binary digits - {lock_mask}")
+        responses: List[str] = await self._send_command("AT+BLCK", lock_mask, password,
+                                                        1 if lock else 0, 1 if permalock else 0,
+                                                        epc_mask)
+        # AT+BLCK=11000,ABCD1234,1,0<CR><LF>
+        # +BLCK: ABCD01237654321001234567,OK<CR><LF>
+        # OK<CR><LF>
+        return self._parse_tag_responses(responses, 7)
 
     async def set_lock_password(self, password: str, new_password, epc_mask: Optional[str] = None) -> List[UhfTag]:
         """Change the lock/access password of a tag.

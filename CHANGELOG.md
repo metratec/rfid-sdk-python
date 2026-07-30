@@ -1,6 +1,27 @@
 Release Notes
 #############
 
+1.4.5
+=====
+
+:Release Date: 2026-07-29
+
+* Fixed the continuous inventory on firmware that terminates streaming
+  events with a bare carriage return (DwarfG2 v2 1.99.5 and newer).
+  Affected readers reported no inventory events at all and were reset by
+  the connection watchdog after a few seconds.
+* UHF AT reader: added bitmap_lock_tag() for the AT+BLCK command, which
+  locks or unlocks several memory banks in a single transaction. Required
+  by transponders that only support permanent locking and expect all
+  memory areas to be locked at once.
+* UHF AT reader: set_inventory_settings() accepts an explicit TID byte
+  count in addition to on/off, matching the current AT protocol.
+
+  * get_inventory_settings() no longer reports a configured byte count as
+    a disabled TID. Previously that value was cached as 'off' and any
+    later call to set_inventory_settings() silently disabled the TID
+    output.
+
 1.4.4
 =====
 
