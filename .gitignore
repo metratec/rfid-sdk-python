@@ -12,3 +12,6 @@ build
 # environment settings
 .vscode
 checkCode.sh
+
+# operating system files
+.DS_Store

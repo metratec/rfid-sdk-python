@@ -21,6 +21,10 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://www.metratec.com/",
+    project_urls={
+        "Source": "https://github.com/metratec/rfid-sdk-python",
+        "Changelog": "https://github.com/metratec/rfid-sdk-python/blob/main/CHANGELOG.md",
+    },
     author="Matthias Neumann",
     author_email="neumann@metratec.com",
     license="MIT",
@@ -31,6 +35,7 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Operating System :: OS Independent"
     ],
+    python_requires=">=3.9",
     packages=["metratec_rfid", "metratec_rfid.connection"],
     include_package_data=True,
     package_dir={'metratec_rfid': 'metratec_rfid'},
